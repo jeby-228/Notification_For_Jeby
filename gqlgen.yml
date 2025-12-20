@@ -1,0 +1,15 @@
+schema:
+  - graphql/schema.graphql
+
+exec:
+  filename: graphql/generated.go
+  package: graphql
+
+model:
+  filename: graphql/model/models_gen.go
+  package: model
+
+resolver:
+  layout: follow-schema
+  dir: graphql
+  package: graphql

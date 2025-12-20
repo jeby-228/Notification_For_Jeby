@@ -1,0 +1,152 @@
+name: Docker Image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: "15 22 * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  build-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: downcase REPO
+        run: |
+          echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Scheduled scan: scan existing published image
+      - name: Run Trivy vulnerability scanner on published image
+        uses: aquasecurity/trivy-action@0.33.1
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        with:
+          image-ref: ghcr.io/${{ env.REPO }}:latest
+          format: "sarif"
+          output: "trivy-docker-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy results to GitHub Security tab (scheduled)
+        uses: github/codeql-action/upload-sarif@v4
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && always()
+        with:
+          sarif_file: "trivy-docker-results.sarif"
+
+      - name: Run Trivy vulnerability scanner (table output for scheduled)
+        uses: aquasecurity/trivy-action@0.33.1
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        with:
+          image-ref: ghcr.io/${{ env.REPO }}:latest
+          format: "table"
+          severity: "CRITICAL,HIGH"
+          exit-code: "1"
+
+      # Build and scan workflow for push/PR
+      - name: Setup go
+        uses: actions/setup-go@v6
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+        with:
+          go-version: "stable"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+
+      - name: Get version info
+        id: version
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+          else
+            VERSION="dev"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "commit=${{ github.sha }}" >> $GITHUB_OUTPUT
+      - name: Docker meta
+        id: docker-meta
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ env.REPO }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+      - name: Build for scanning
+        uses: docker/build-push-action@v6
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+        with:
+          context: .
+          platforms: linux/amd64
+          file: Dockerfile
+          load: true
+          tags: ${{ env.REPO }}:scan
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            COMMIT=${{ steps.version.outputs.commit }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner on Docker image
+        uses: aquasecurity/trivy-action@0.33.1
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+        with:
+          image-ref: ${{ env.REPO }}:scan
+          format: "sarif"
+          output: "trivy-docker-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        if: (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') && always()
+        with:
+          sarif_file: "trivy-docker-results.sarif"
+
+      - name: Run Trivy vulnerability scanner (table output)
+        uses: aquasecurity/trivy-action@0.33.1
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+        with:
+          image-ref: ${{ env.REPO }}:scan
+          format: "table"
+          severity: "CRITICAL,HIGH"
+          exit-code: "1"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        if: github.event_name != 'pull_request' && github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.docker-meta.outputs.tags }}
+          labels: ${{ steps.docker-meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            COMMIT=${{ steps.version.outputs.commit }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

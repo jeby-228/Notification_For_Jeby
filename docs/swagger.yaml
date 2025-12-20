@@ -1,0 +1,288 @@
+basePath: /api/v1
+definitions:
+  controllers.AuthResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      user:
+        $ref: '#/definitions/controllers.User'
+    type: object
+  controllers.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: password123
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  controllers.RegisterRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      name:
+        example: 張三
+        type: string
+      password:
+        example: password123
+        minLength: 6
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  controllers.User:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: 張三
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: 這是一個使用 Go、Gin 框架和 PostgreSQL 構建的 RESTful 和 GraphQL API 服務，提供會員管理功能和
+    JWT 認證
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Member API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: 檢查服務器狀態和數據庫連接狀態
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 服務正常
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 健康檢查
+      tags:
+      - 系統
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: 用戶登入，驗證郵件和密碼後返回 JWT token 和用戶信息
+      parameters:
+      - description: 登入信息
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登入成功
+          schema:
+            $ref: '#/definitions/controllers.AuthResponse'
+        "400":
+          description: 請求參數錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 電子郵件或密碼錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 用戶登入
+      tags:
+      - 認證
+  /profile:
+    get:
+      consumes:
+      - application/json
+      description: 獲取當前登入用戶的詳細信息，需要 JWT 認證
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 獲取成功
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/controllers.User'
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 用戶不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 獲取當前用戶信息
+      tags:
+      - 用戶
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: 註冊新用戶，返回 JWT token 和用戶信息
+      parameters:
+      - description: 註冊信息
+        in: body
+        name: register
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 註冊成功
+          schema:
+            $ref: '#/definitions/controllers.AuthResponse'
+        "400":
+          description: 請求參數錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: 該電子郵件已被註冊
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 用戶註冊
+      tags:
+      - 認證
+  /user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 根據會員 ID 獲取單個會員的詳細信息，需要 JWT 認證
+      parameters:
+      - description: 會員 ID
+        example: 1
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 獲取成功
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/controllers.User'
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 會員不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 根據 ID 獲取會員
+      tags:
+      - 用戶
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: 獲取會員列表，最多返回 50 條記錄，需要 JWT 認證
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 獲取成功
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/controllers.User'
+              type: array
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 獲取所有會員
+      tags:
+      - 用戶
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: JWT 認證，格式：Bearer {token}
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

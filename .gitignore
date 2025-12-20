@@ -1,0 +1,39 @@
+# Binaries
+/member_API
+/member_API.exe
+/test.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Build outputs
+/bin/
+/build/
+/dist/
+/tmp/
+*.test
+*.out
+
+# Dependency / workspace files
+/go.work
+/go.work.sum
+/vendor/
+
+# Logs & coverage
+*.log
+coverage.*
+*.coverprofile
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+.envrc
+
+# IDE/editor
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
