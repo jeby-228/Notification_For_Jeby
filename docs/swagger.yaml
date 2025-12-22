@@ -200,6 +200,49 @@ paths:
       tags:
       - 認證
   /user/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根據會員 ID 刪除會員，需要 JWT 認證
+      parameters:
+      - description: 會員 ID
+        example: 1
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 刪除成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 無效的會員 ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 刪除會員
+      tags:
+      - 用戶
     get:
       consumes:
       - application/json

@@ -104,3 +104,36 @@ func GetUserByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}})
 }
+
+// DeleteUserByID deletes a user by ID from the database.
+// @Summary 刪除會員
+// @Description 根據會員 ID 刪除會員，需要 JWT 認證
+// @Tags 用戶
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "會員 ID" example(1)
+// @Success 200 {object} map[string]string "刪除成功"
+// @Failure 400 {object} map[string]string "無效的會員 ID"
+// @Failure 401 {object} map[string]string "未認證"
+// @Failure 500 {object} map[string]string "服務器錯誤"
+// @Router /user/{id} [delete]
+func DeleteUserByID(c *gin.Context) {
+	if db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "database connection not configured"})
+		return
+	}
+
+	memberID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	if err := db.WithContext(c.Request.Context()).Delete(&models.Member{}, memberID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "user deleted successfully"})
+}

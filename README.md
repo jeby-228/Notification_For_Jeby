@@ -140,8 +140,6 @@ docker pull ghcr.io/jebylinjbjob/member_api:v1.0.0
 
 ### 運行容器
 
-使用環境變數傳遞配置（**重要**：切勿在 Dockerfile 中硬編碼密鑰）：
-
 ```bash
 docker run -d \
   -p 8080:8080 \
@@ -259,21 +257,3 @@ go fmt ./...
 ```bash
 go vet ./...
 ```
-
-## 安全注意事項
-
-1. **JWT Secret**: 生產環境務必設置強隨機的 `JWT_SECRET`
-2. **Docker 密鑰**: 切勿在 Dockerfile 中硬編碼密鑰，應在運行時通過 `-e` 參數傳入
-3. **密碼強度**: 實施強密碼策略
-4. **HTTPS**: 生產環境必須使用 HTTPS
-5. **環境變數**: 切勿將 `.env` 文件提交到版本控制
-6. **資料庫**: 使用安全的資料庫連線和存取控制
-
-## 文檔
-
-- [認證功能使用指南](docs/AUTHENTICATION.md)
-- [Swagger API 文檔使用指南](docs/SWAGGER.md)
-
-## 貢獻
-
-歡迎提交 Issue 和 Pull Request！

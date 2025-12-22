@@ -43,5 +43,6 @@ func SetupRouter(Router *gin.Engine) {
 			controllers.GetUserByID(c)
 		})
 		protected.GET("/profile", controllers.GetProfile) // Get current user information
+		protected.DELETE("/user/:id", controllers.DeleteUserByID)
 	}
 }
