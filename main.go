@@ -138,13 +138,15 @@ func main() {
 		}()
 	}
 
-	// 初始化 GraphQL
-	if err := setupGraphQL(); err != nil {
-		log.Fatalf("GraphQL setup failed: %v\n", err)
-	}
-
 	// 創建 Gin 路由器
 	Router := gin.Default()
+
+	// 初始化 GraphQL（必須在路由設置之前）
+	if err := setupGraphQL(); err != nil {
+		log.Printf("Warning: GraphQL setup failed: %v\n", err)
+	} else {
+		log.Println("[Main] GraphQL setup completed successfully")
+	}
 
 	// 設置路由（需要在 GraphQL 初始化之後）
 	routes.SetupRouter(Router)

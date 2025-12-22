@@ -26,20 +26,13 @@
 
 ## 快速開始
 
-### 1. 環境需求
+### 環境需求
 
 - Go 1.24 或更高版本
 - PostgreSQL 12 或更高版本
 - Git
 
-### 2. 克隆專案
-
-```bash
-git clone https://github.com/jebylinjbjob/member_API.git
-cd member_API
-```
-
-### 3. 環境變數設定
+### 環境變數設定
 
 複製環境變數範例文件並根據需要修改：
 
@@ -59,46 +52,8 @@ cp .env.example .env
 openssl rand -base64 32
 ```
 
-### 4. 載入環境變數
 
-```bash
-# Linux/macOS
-export $(cat .env | xargs)
-
-# 或使用 source（如果使用 bash/zsh）
-set -a
-source .env
-set +a
-```
-
-### 5. 安裝依賴
-
-```bash
-go mod download
-```
-
-### 6. 資料庫設置
-
-確保 PostgreSQL 服務正在運行，然後創建資料庫：
-
-```bash
-# 連接到 PostgreSQL
-psql -U postgres
-
-# 創建資料庫
-CREATE DATABASE member_api;
-
-# 退出
-\q
-```
-
-執行資料庫遷移：
-
-```bash
-psql -U postgres -d member_api -f database/migration.sql
-```
-
-### 7. 生成 Swagger 文檔
+### 生成 Swagger 文檔
 
 ```bash
 # 安裝 swag（如果尚未安裝）
@@ -108,7 +63,9 @@ go install github.com/swaggo/swag/cmd/swag@latest
 swag init
 ```
 
-### 8. 啟動服務
+
+
+### 啟動服務
 
 ```bash
 go run main.go
@@ -186,40 +143,6 @@ curl http://localhost:8080/health
 - `GET /api/v1/users` - 獲取所有會員
 - `GET /api/v1/user/:id` - 獲取單個會員
 - `GET /api/v1/profile` - 獲取當前用戶信息
-
-## 認證使用範例
-
-### 註冊新用戶
-
-```bash
-curl -X POST http://localhost:8080/api/v1/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "張三",
-    "email": "zhangsan@example.com",
-    "password": "password123"
-  }'
-```
-
-### 用戶登入
-
-```bash
-curl -X POST http://localhost:8080/api/v1/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "zhangsan@example.com",
-    "password": "password123"
-  }'
-```
-
-### 訪問受保護的 API
-
-```bash
-curl -X GET http://localhost:8080/api/v1/users \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-更多詳細資訊請參閱 [認證文檔](docs/AUTHENTICATION.md)。
 
 ## 專案結構
 
