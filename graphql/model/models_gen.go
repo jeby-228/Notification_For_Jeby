@@ -8,6 +8,14 @@ type CreateMemberInput struct {
 	Password string `json:"password"`
 }
 
+type CreateProductInput struct {
+	ProductName        string  `json:"product_name"`
+	ProductPrice       float64 `json:"product_price"`
+	ProductDescription *string `json:"product_description,omitempty"`
+	ProductImage       *string `json:"product_image,omitempty"`
+	ProductStock       int     `json:"product_stock"`
+}
+
 // GraphQL Schema for Member API.
 // This SDL mirrors the implemented queries in the Go resolvers.
 type Member struct {
@@ -21,10 +29,36 @@ type Member struct {
 type Mutation struct {
 }
 
+type Product struct {
+	ID                 string  `json:"id"`
+	ProductName        string  `json:"product_name"`
+	ProductPrice       float64 `json:"product_price"`
+	ProductDescription *string `json:"product_description,omitempty"`
+	ProductImage       *string `json:"product_image,omitempty"`
+	ProductStock       int     `json:"product_stock"`
+	CreatedAt          *string `json:"created_at,omitempty"`
+	UpdatedAt          *string `json:"updated_at,omitempty"`
+}
+
+type ProductsResponse struct {
+	Products []*Product `json:"products"`
+	Total    int        `json:"total"`
+	Limit    int        `json:"limit"`
+	Offset   int        `json:"offset"`
+}
+
 type Query struct {
 }
 
 type UpdateMemberInput struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
+}
+
+type UpdateProductInput struct {
+	ProductName        *string  `json:"product_name,omitempty"`
+	ProductPrice       *float64 `json:"product_price,omitempty"`
+	ProductDescription *string  `json:"product_description,omitempty"`
+	ProductImage       *string  `json:"product_image,omitempty"`
+	ProductStock       *int     `json:"product_stock,omitempty"`
 }

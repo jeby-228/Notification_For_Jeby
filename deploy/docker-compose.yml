@@ -18,7 +18,7 @@ services:
       - 'com.centurylinklabs.watchtower.enable=true'
 
   watchtower:
-    image: containrrr/watchtower:latest
+    image: containrrr/watchtower:arm64v8-latest
     container_name: member_api_watchtower
     restart: unless-stopped
     volumes:

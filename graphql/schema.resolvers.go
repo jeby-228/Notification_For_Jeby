@@ -69,6 +69,104 @@ func (r *mutationResolver) DeleteMember(ctx context.Context, id string) (bool, e
 	return true, nil
 }
 
+// CreateProduct is the resolver for the createProduct field.
+func (r *mutationResolver) CreateProduct(ctx context.Context, input model.CreateProductInput) (*model.Product, error) {
+	if r.DB == nil {
+		return nil, fmt.Errorf("database connection not configured")
+	}
+
+	creatorID := getUserIDFromContext(ctx)
+
+	product := models.Product{
+		ProductName:        input.ProductName,
+		ProductPrice:       input.ProductPrice,
+		ProductDescription: ptrToString(input.ProductDescription),
+		ProductImage:       ptrToString(input.ProductImage),
+		ProductStock:       input.ProductStock,
+		Base: models.Base{
+			CreatorId: creatorID,
+		},
+	}
+
+	if err := r.DB.Create(&product).Error; err != nil {
+		return nil, err
+	}
+
+	return productDBToModel(product), nil
+}
+
+// UpdateProduct is the resolver for the updateProduct field.
+func (r *mutationResolver) UpdateProduct(ctx context.Context, id string, input model.UpdateProductInput) (*model.Product, error) {
+	if r.DB == nil {
+		return nil, fmt.Errorf("database connection not configured")
+	}
+
+	productID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("invalid product ID")
+	}
+
+	var product models.Product
+	if err := r.DB.Where("is_deleted = ?", false).First(&product, productID).Error; err != nil {
+		return nil, fmt.Errorf("product not found")
+	}
+
+	modifierID := getUserIDFromContext(ctx)
+	product.LastModifierId = modifierID
+
+	updates := make(map[string]interface{})
+	if input.ProductName != nil {
+		updates["product_name"] = *input.ProductName
+	}
+	if input.ProductPrice != nil {
+		updates["product_price"] = *input.ProductPrice
+	}
+	if input.ProductDescription != nil {
+		updates["product_description"] = *input.ProductDescription
+	}
+	if input.ProductImage != nil {
+		updates["product_image"] = *input.ProductImage
+	}
+	if input.ProductStock != nil {
+		updates["product_stock"] = *input.ProductStock
+	}
+	updates["last_modifier_id"] = modifierID
+
+	if err := r.DB.Model(&product).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+
+	// Reload product
+	if err := r.DB.First(&product, productID).Error; err != nil {
+		return nil, err
+	}
+
+	return productDBToModel(product), nil
+}
+
+// DeleteProduct is the resolver for the deleteProduct field.
+func (r *mutationResolver) DeleteProduct(ctx context.Context, id string) (bool, error) {
+	if r.DB == nil {
+		return false, fmt.Errorf("database connection not configured")
+	}
+
+	productID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		return false, fmt.Errorf("invalid product ID")
+	}
+
+	var product models.Product
+	if err := r.DB.Where("is_deleted = ?", false).First(&product, productID).Error; err != nil {
+		return false, fmt.Errorf("product not found")
+	}
+
+	if err := r.DB.Model(&product).Updates(map[string]interface{}{"is_deleted": true}).Error; err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 // Member is the resolver for the member field.
 func (r *queryResolver) Member(ctx context.Context, id string) (*model.Member, error) {
 	if r.DB == nil {
@@ -101,6 +199,75 @@ func (r *queryResolver) Members(ctx context.Context, limit *int) ([]*model.Membe
 	return out, nil
 }
 
+// Product is the resolver for the product field.
+func (r *queryResolver) Product(ctx context.Context, id string) (*model.Product, error) {
+	if r.DB == nil {
+		return nil, nil
+	}
+
+	var product models.Product
+	if err := r.DB.Where("is_deleted = ?", false).First(&product, id).Error; err != nil {
+		return nil, nil
+	}
+
+	return productDBToModel(product), nil
+}
+
+// Products is the resolver for the products field.
+func (r *queryResolver) Products(ctx context.Context, limit *int, offset *int) (*model.ProductsResponse, error) {
+	if r.DB == nil {
+		return &model.ProductsResponse{
+			Products: []*model.Product{},
+			Total:    0,
+			Limit:    0,
+			Offset:   0,
+		}, nil
+	}
+
+	lim := 50
+	if limit != nil && *limit > 0 {
+		if *limit > 100 {
+			lim = 100
+		} else {
+			lim = *limit
+		}
+	}
+
+	off := 0
+	if offset != nil && *offset >= 0 {
+		off = *offset
+	}
+
+	var products []models.Product
+	var total int64
+
+	// Get total count
+	if err := r.DB.Model(&models.Product{}).Where("is_deleted = ?", false).Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	// Get products
+	if err := r.DB.Where("is_deleted = ?", false).
+		Order("sort ASC, id DESC").
+		Limit(lim).
+		Offset(off).
+		Find(&products).Error; err != nil {
+		return nil, err
+	}
+
+	out := make([]*model.Product, len(products))
+	for i, p := range products {
+		out[i] = productDBToModel(p)
+	}
+
+	return &model.ProductsResponse{
+		Products: out,
+		Total:    int(total),
+		Limit:    lim,
+		Offset:   off,
+	}, nil
+}
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
@@ -110,6 +277,7 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 
+// Helper functions
 func dbToModel(m models.Member) *model.Member {
 	var created, updated *string
 	if !m.CreationTime.IsZero() {
@@ -129,20 +297,36 @@ func dbToModel(m models.Member) *model.Member {
 	}
 }
 
+func productDBToModel(p models.Product) *model.Product {
+	var created, updated *string
+	if !p.CreationTime.IsZero() {
+		s := formatTime(p.CreationTime)
+		created = &s
+	}
+	if p.LastModificationTime != nil && !p.LastModificationTime.IsZero() {
+		s := formatTime(*p.LastModificationTime)
+		updated = &s
+	}
+	return &model.Product{
+		ID:                 formatID(p.ID),
+		ProductName:        p.ProductName,
+		ProductPrice:       p.ProductPrice,
+		ProductDescription: stringPtr(p.ProductDescription),
+		ProductImage:       stringPtr(p.ProductImage),
+		ProductStock:       p.ProductStock,
+		CreatedAt:          created,
+		UpdatedAt:          updated,
+	}
+}
+
 func formatTime(t time.Time) string {
 	return t.UTC().Format(time.RFC3339)
 }
 
 func formatID(id uint) string {
-	return fmtUint(id)
+	return strconv.FormatUint(uint64(id), 10)
 }
 
-func fmtUint(u uint) string {
-	return strconv.FormatUint(uint64(u), 10)
-}
-
-// getUserIDFromContext 從 context 取得使用者 ID
-// 如果未登入或取得失敗，回傳 0 表示系統操作
 func getUserIDFromContext(ctx context.Context) uint {
 	userID, ok := ctx.Value("user_id").(int64)
 	if !ok || userID <= 0 {
@@ -151,36 +335,16 @@ func getUserIDFromContext(ctx context.Context) uint {
 	return uint(userID)
 }
 
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-/*
-	func dbToModel(m models.Member) *model.Member {
-	var created, updated *string
-	if !m.CreatedAt.IsZero() {
-		s := formatTime(m.CreatedAt)
-		created = &s
+func stringPtr(s string) *string {
+	if s == "" {
+		return nil
 	}
-	if !m.UpdatedAt.IsZero() {
-		s := formatTime(m.UpdatedAt)
-		updated = &s
+	return &s
+}
+
+func ptrToString(s *string) string {
+	if s == nil {
+		return ""
 	}
-	return &model.Member{
-		ID:        formatID(m.ID),
-		Name:      m.Name,
-		Email:     m.Email,
-		CreatedAt: created,
-		UpdatedAt: updated,
-	}
+	return *s
 }
-func formatTime(t time.Time) string {
-	return t.UTC().Format(time.RFC3339)
-}
-func formatID(id uint) string {
-	return fmtUint(id)
-}
-func fmtUint(u uint) string { return strconv.FormatUint(uint64(u), 10) }
-*/

@@ -10,6 +10,18 @@ type Member {
   updated_at: String
 }
 
+# ========== Product Type ==========
+type Product {
+  id: ID!
+  product_name: String!
+  product_price: Float!
+  product_description: String
+  product_image: String
+  product_stock: Int!
+  created_at: String
+  updated_at: String
+}
+
 type Query {
   """
   Fetch a single member by ID
@@ -20,6 +32,25 @@ type Query {
   Fetch a list of members (default limit: 50)
   """
   members(limit: Int): [Member!]!
+
+  # ========== Product Queries ==========
+  """
+  Fetch a single product by ID
+  """
+  product(id: ID!): Product
+
+  """
+  Fetch a list of products with pagination
+  """
+  products(limit: Int, offset: Int): ProductsResponse!
+}
+
+# ========== Product Response with Pagination ==========
+type ProductsResponse {
+  products: [Product!]!
+  total: Int!
+  limit: Int!
+  offset: Int!
 }
 
 type Mutation {
@@ -37,6 +68,22 @@ type Mutation {
   Delete a member (soft delete)
   """
   deleteMember(id: ID!): Boolean!
+
+  # ========== Product Mutations ==========
+  """
+  Create a new product
+  """
+  createProduct(input: CreateProductInput!): Product!
+
+  """
+  Update an existing product
+  """
+  updateProduct(id: ID!, input: UpdateProductInput!): Product!
+
+  """
+  Delete a product (soft delete)
+  """
+  deleteProduct(id: ID!): Boolean!
 }
 
 input CreateMemberInput {
@@ -48,4 +95,21 @@ input CreateMemberInput {
 input UpdateMemberInput {
   name: String!
   email: String!
+}
+
+# ========== Product Inputs ==========
+input CreateProductInput {
+  product_name: String!
+  product_price: Float!
+  product_description: String
+  product_image: String
+  product_stock: Int!
+}
+
+input UpdateProductInput {
+  product_name: String
+  product_price: Float
+  product_description: String
+  product_image: String
+  product_stock: Int
 }

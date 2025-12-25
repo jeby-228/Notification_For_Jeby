@@ -44,5 +44,12 @@ func SetupRouter(Router *gin.Engine) {
 		})
 		protected.GET("/profile", controllers.GetProfile) // Get current user information
 		protected.DELETE("/user/:id", controllers.DeleteUserByID)
+
+		// Product routes
+		protected.GET("/products", controllers.GetProducts)
+		protected.GET("/product/:id", controllers.GetProductByID)
+		protected.POST("/product", controllers.CreateProduct)
+		protected.PUT("/product/:id", controllers.UpdateProduct)
+		protected.DELETE("/product/:id", controllers.DeleteProduct)
 	}
 }

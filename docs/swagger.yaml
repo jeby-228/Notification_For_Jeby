@@ -8,6 +8,29 @@ definitions:
       user:
         $ref: '#/definitions/controllers.User'
     type: object
+  controllers.CreateProductRequest:
+    properties:
+      product_description:
+        example: 最新款 iPhone
+        type: string
+      product_image:
+        example: https://example.com/image.jpg
+        type: string
+      product_name:
+        example: iPhone 15 Pro
+        type: string
+      product_price:
+        example: 35900
+        type: number
+      product_stock:
+        example: 100
+        minimum: 0
+        type: integer
+    required:
+    - product_name
+    - product_price
+    - product_stock
+    type: object
   controllers.LoginRequest:
     properties:
       email:
@@ -20,6 +43,27 @@ definitions:
     required:
     - email
     - password
+    type: object
+  controllers.ProductResponse:
+    properties:
+      id:
+        example: 1
+        type: integer
+      product_description:
+        example: 最新款 iPhone
+        type: string
+      product_image:
+        example: https://example.com/image.jpg
+        type: string
+      product_name:
+        example: iPhone 15 Pro
+        type: string
+      product_price:
+        example: 35900
+        type: number
+      product_stock:
+        example: 100
+        type: integer
     type: object
   controllers.RegisterRequest:
     properties:
@@ -38,6 +82,24 @@ definitions:
     - name
     - password
     type: object
+  controllers.UpdateProductRequest:
+    properties:
+      product_description:
+        example: 更新的描述
+        type: string
+      product_image:
+        example: https://example.com/new-image.jpg
+        type: string
+      product_name:
+        example: iPhone 15 Pro Max
+        type: string
+      product_price:
+        example: 42900
+        type: number
+      product_stock:
+        example: 50
+        type: integer
+    type: object
   controllers.User:
     properties:
       email:
@@ -50,7 +112,7 @@ definitions:
         example: 張三
         type: string
     type: object
-host: localhost:8080
+host: localhost:9876
 info:
   contact:
     email: support@swagger.io
@@ -122,6 +184,248 @@ paths:
       summary: 用戶登入
       tags:
       - 認證
+  /product:
+    post:
+      consumes:
+      - application/json
+      description: 創建新產品，需要 JWT 認證
+      parameters:
+      - description: 產品信息
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 創建成功
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/controllers.ProductResponse'
+            type: object
+        "400":
+          description: 請求參數錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 創建產品
+      tags:
+      - 產品
+  /product/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根據產品 ID 軟刪除產品，需要 JWT 認證
+      parameters:
+      - description: 產品 ID
+        example: 1
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 刪除成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 無效的產品 ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 產品不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 刪除產品
+      tags:
+      - 產品
+    get:
+      consumes:
+      - application/json
+      description: 根據產品 ID 獲取單個產品的詳細信息，需要 JWT 認證
+      parameters:
+      - description: 產品 ID
+        example: 1
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 獲取成功
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/controllers.ProductResponse'
+            type: object
+        "400":
+          description: 無效的產品 ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 產品不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 根據 ID 獲取產品
+      tags:
+      - 產品
+    put:
+      consumes:
+      - application/json
+      description: 根據產品 ID 更新產品信息，需要 JWT 認證
+      parameters:
+      - description: 產品 ID
+        example: 1
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 要更新的產品信息
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/controllers.ProductResponse'
+            type: object
+        "400":
+          description: 請求參數錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 產品不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新產品
+      tags:
+      - 產品
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: 獲取產品列表，最多返回 100 條記錄，需要 JWT 認證
+      parameters:
+      - default: 50
+        description: 限制返回數量
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 獲取成功
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 獲取所有產品
+      tags:
+      - 產品
   /profile:
     get:
       consumes:
