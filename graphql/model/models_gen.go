@@ -2,6 +2,12 @@
 
 package model
 
+type CreateMemberInput struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 // GraphQL Schema for Member API.
 // This SDL mirrors the implemented queries in the Go resolvers.
 type Member struct {
@@ -12,5 +18,13 @@ type Member struct {
 	UpdatedAt *string `json:"updated_at,omitempty"`
 }
 
+type Mutation struct {
+}
+
 type Query struct {
+}
+
+type UpdateMemberInput struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }

@@ -7,11 +7,67 @@ package graphql
 
 import (
 	"context"
+	"fmt"
 	"member_API/graphql/model"
 	"member_API/models"
+	"member_API/services"
 	"strconv"
 	"time"
 )
+
+// CreateMember is the resolver for the createMember field.
+func (r *mutationResolver) CreateMember(ctx context.Context, input model.CreateMemberInput) (*model.Member, error) {
+	svc := services.NewMemberService(r.DB)
+
+	// 從 context 取得使用者 ID（如果沒有則使用 0 表示系統建立）
+	creatorId := getUserIDFromContext(ctx)
+
+	member, err := svc.CreateMember(input.Name, input.Email, input.Password, creatorId)
+	if err != nil {
+		return nil, err
+	}
+
+	return dbToModel(*member), nil
+}
+
+// UpdateMember is the resolver for the updateMember field.
+func (r *mutationResolver) UpdateMember(ctx context.Context, id string, input model.UpdateMemberInput) (*model.Member, error) {
+	svc := services.NewMemberService(r.DB)
+
+	memberID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("無效的會員 ID")
+	}
+
+	// 從 context 取得使用者 ID
+	modifierId := getUserIDFromContext(ctx)
+
+	member, err := svc.UpdateMember(uint(memberID), input.Name, input.Email, modifierId)
+	if err != nil {
+		return nil, err
+	}
+
+	return dbToModel(*member), nil
+}
+
+// DeleteMember is the resolver for the deleteMember field.
+func (r *mutationResolver) DeleteMember(ctx context.Context, id string) (bool, error) {
+	svc := services.NewMemberService(r.DB)
+
+	memberID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		return false, fmt.Errorf("無效的會員 ID")
+	}
+
+	// 從 context 取得使用者 ID
+	deleterId := getUserIDFromContext(ctx)
+
+	if err := svc.DeleteMember(uint(memberID), deleterId); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
 
 // Member is the resolver for the member field.
 func (r *queryResolver) Member(ctx context.Context, id string) (*model.Member, error) {
@@ -45,19 +101,23 @@ func (r *queryResolver) Members(ctx context.Context, limit *int) ([]*model.Membe
 	return out, nil
 }
 
+// Mutation returns MutationResolver implementation.
+func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
+
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 
 func dbToModel(m models.Member) *model.Member {
 	var created, updated *string
-	if !m.CreatedAt.IsZero() {
-		s := formatTime(m.CreatedAt)
+	if !m.CreationTime.IsZero() {
+		s := formatTime(m.CreationTime)
 		created = &s
 	}
-	if !m.UpdatedAt.IsZero() {
-		s := formatTime(m.UpdatedAt)
+	if m.LastModificationTime != nil && !m.LastModificationTime.IsZero() {
+		s := formatTime(*m.LastModificationTime)
 		updated = &s
 	}
 	return &model.Member{
@@ -77,4 +137,50 @@ func formatID(id uint) string {
 	return fmtUint(id)
 }
 
+func fmtUint(u uint) string {
+	return strconv.FormatUint(uint64(u), 10)
+}
+
+// getUserIDFromContext 從 context 取得使用者 ID
+// 如果未登入或取得失敗，回傳 0 表示系統操作
+func getUserIDFromContext(ctx context.Context) uint {
+	userID, ok := ctx.Value("user_id").(int64)
+	if !ok || userID <= 0 {
+		return 0
+	}
+	return uint(userID)
+}
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+/*
+	func dbToModel(m models.Member) *model.Member {
+	var created, updated *string
+	if !m.CreatedAt.IsZero() {
+		s := formatTime(m.CreatedAt)
+		created = &s
+	}
+	if !m.UpdatedAt.IsZero() {
+		s := formatTime(m.UpdatedAt)
+		updated = &s
+	}
+	return &model.Member{
+		ID:        formatID(m.ID),
+		Name:      m.Name,
+		Email:     m.Email,
+		CreatedAt: created,
+		UpdatedAt: updated,
+	}
+}
+func formatTime(t time.Time) string {
+	return t.UTC().Format(time.RFC3339)
+}
+func formatID(id uint) string {
+	return fmtUint(id)
+}
 func fmtUint(u uint) string { return strconv.FormatUint(uint64(u), 10) }
+*/

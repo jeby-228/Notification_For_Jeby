@@ -6,6 +6,7 @@ import (
 
 	"member_API/auth"
 	"member_API/models"
+	"member_API/services"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -39,43 +40,29 @@ type AuthResponse struct {
 // @Failure 409 {object} map[string]string "該電子郵件已被註冊"
 // @Failure 500 {object} map[string]string "服務器錯誤"
 // @Router /register [post]
-func Register(c *gin.Context) {
+func Register(input *gin.Context) {
 	if db == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "數據庫連接未配置"})
+		input.JSON(http.StatusInternalServerError, gin.H{"error": "數據庫連接未配置"})
 		return
 	}
 
 	var req RegisterRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := input.ShouldBindJSON(&req); err != nil {
+		input.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// 檢查用戶是否已存在
-	var existing models.Member
-	err := db.WithContext(c.Request.Context()).
-		Select("id").
-		Where("email = ?", req.Email).
-		First(&existing).Error
-	if err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "該電子郵件已被註冊"})
-		return
-	}
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+	// 使用 Service 層建立會員（自動處理密碼加密、審計欄位等）
+	svc := services.NewMemberService(db)
 
-	// 加密密碼
-	hashedPassword, err := auth.HashPassword(req.Password)
+	// 註冊時使用 creatorId = 0 表示自行註冊
+	member, err := svc.CreateMember(req.Name, req.Email, req.Password, 0)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "密碼加密失敗"})
-		return
-	}
-
-	member := models.Member{Name: req.Name, Email: req.Email, PasswordHash: hashedPassword}
-	if err := db.WithContext(c.Request.Context()).Create(&member).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if err.Error() == "email 已被使用" {
+			input.JSON(http.StatusConflict, gin.H{"error": "該電子郵件已被註冊"})
+			return
+		}
+		input.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -84,11 +71,11 @@ func Register(c *gin.Context) {
 	// 生成 token
 	token, err := auth.GenerateToken(user.ID, user.Email)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token 生成失敗"})
+		input.JSON(http.StatusInternalServerError, gin.H{"error": "Token 生成失敗"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, AuthResponse{
+	input.JSON(http.StatusCreated, AuthResponse{
 		Token: token,
 		User:  user,
 	})
@@ -106,36 +93,36 @@ func Register(c *gin.Context) {
 // @Failure 401 {object} map[string]string "電子郵件或密碼錯誤"
 // @Failure 500 {object} map[string]string "服務器錯誤"
 // @Router /login [post]
-func Login(c *gin.Context) {
+func Login(input *gin.Context) {
 	if db == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "數據庫連接未配置"})
+		input.JSON(http.StatusInternalServerError, gin.H{"error": "數據庫連接未配置"})
 		return
 	}
 
 	var req LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := input.ShouldBindJSON(&req); err != nil {
+		input.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// 查詢用戶
 	var member models.Member
-	err := db.WithContext(c.Request.Context()).
+	err := db.WithContext(input.Request.Context()).
 		Where("email = ?", req.Email).
 		First(&member).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "電子郵件或密碼錯誤"})
+			input.JSON(http.StatusUnauthorized, gin.H{"error": "電子郵件或密碼錯誤"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		input.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	// 驗證密碼
 	if !auth.CheckPassword(req.Password, member.PasswordHash) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "電子郵件或密碼錯誤"})
+		input.JSON(http.StatusUnauthorized, gin.H{"error": "電子郵件或密碼錯誤"})
 		return
 	}
 
@@ -144,11 +131,11 @@ func Login(c *gin.Context) {
 	// 生成 token
 	token, err := auth.GenerateToken(user.ID, user.Email)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token 生成失敗"})
+		input.JSON(http.StatusInternalServerError, gin.H{"error": "Token 生成失敗"})
 		return
 	}
 
-	c.JSON(http.StatusOK, AuthResponse{
+	input.JSON(http.StatusOK, AuthResponse{
 		Token: token,
 		User:  user,
 	})

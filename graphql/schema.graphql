@@ -2,20 +2,50 @@
 GraphQL Schema for Member API.
 This SDL mirrors the implemented queries in the Go resolvers.
 """
-
 type Member {
-	id: ID!
-	name: String!
-	email: String!
-	created_at: String
-	updated_at: String
+  id: ID!
+  name: String!
+  email: String!
+  created_at: String
+  updated_at: String
 }
 
 type Query {
-	"""Fetch a single member by ID"""
-	member(id: ID!): Member
+  """
+  Fetch a single member by ID
+  """
+  member(id: ID!): Member
 
-	"""Fetch a list of members (default limit: 50)"""
-	members(limit: Int): [Member!]!
+  """
+  Fetch a list of members (default limit: 50)
+  """
+  members(limit: Int): [Member!]!
 }
 
+type Mutation {
+  """
+  Create a new member
+  """
+  createMember(input: CreateMemberInput!): Member!
+
+  """
+  Update an existing member
+  """
+  updateMember(id: ID!, input: UpdateMemberInput!): Member!
+
+  """
+  Delete a member (soft delete)
+  """
+  deleteMember(id: ID!): Boolean!
+}
+
+input CreateMemberInput {
+  name: String!
+  email: String!
+  password: String!
+}
+
+input UpdateMemberInput {
+  name: String!
+  email: String!
+}

@@ -33,7 +33,7 @@ import (
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host localhost:8080
+// @host localhost:9876
 // @BasePath /api/v1
 // @schemes http https
 
@@ -83,10 +83,6 @@ func initPostgreSQL() error {
 
 	log.Println("Connected to PostgreSQL!")
 	return nil
-}
-func setupGraphQL() error {
-	// 初始化 GraphQL 處理器
-	return graphql.SetupGraphQL(db)
 }
 
 // HealthCheck 健康檢查端點
@@ -138,15 +134,15 @@ func main() {
 		}()
 	}
 
-	// 創建 Gin 路由器
-	Router := gin.Default()
-
 	// 初始化 GraphQL（必須在路由設置之前）
-	if err := setupGraphQL(); err != nil {
+	if err := graphql.SetupGraphQL(db); err != nil {
 		log.Printf("Warning: GraphQL setup failed: %v\n", err)
 	} else {
 		log.Println("[Main] GraphQL setup completed successfully")
 	}
+
+	// 創建 Gin 路由器
+	Router := gin.Default()
 
 	// 設置路由（需要在 GraphQL 初始化之後）
 	routes.SetupRouter(Router)

@@ -1,6 +1,7 @@
 package graphql
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
@@ -13,6 +14,11 @@ var gqlHTTPHandler http.Handler
 
 // SetupGraphQL initializes gqlgen schema and a unified handler.
 func SetupGraphQL(db *gorm.DB) error {
+	if db == nil {
+		log.Println("[GraphQL] ERROR: Database connection is nil, cannot initialize GraphQL")
+		return errors.New("database connection not initialized")
+	}
+
 	log.Println("[GraphQL] Setting up schema and handler...")
 	resolver := NewResolver(db)
 	schema := NewExecutableSchema(Config{Resolvers: resolver})
