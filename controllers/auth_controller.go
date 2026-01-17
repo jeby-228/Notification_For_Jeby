@@ -261,7 +261,7 @@ func RegenerateAPIKey(c *gin.Context) {
 func VerifyAPIKey(c *gin.Context) {
 	member, exists := c.Get("member")
 	if !exists {
-		respondError(c, http.StatusUnauthorized, "無效的 API Key")
+		respondError(c, http.StatusInternalServerError, "中間件配置錯誤")
 		return
 	}
 

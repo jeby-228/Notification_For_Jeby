@@ -11,10 +11,7 @@ import (
 )
 
 func TestGenerateAPIKey(t *testing.T) {
-	db, _ := testutil.SetupTestDB(t)
-	svc := NewAPIKeyService(db)
-
-	key, err := svc.GenerateAPIKey()
+	key, err := GenerateAPIKey()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, key)
 	assert.Contains(t, key, "ak_")
@@ -22,12 +19,9 @@ func TestGenerateAPIKey(t *testing.T) {
 }
 
 func TestGenerateAPIKey_Uniqueness(t *testing.T) {
-	db, _ := testutil.SetupTestDB(t)
-	svc := NewAPIKeyService(db)
-
 	keys := make(map[string]bool)
 	for i := 0; i < 100; i++ {
-		key, err := svc.GenerateAPIKey()
+		key, err := GenerateAPIKey()
 		assert.NoError(t, err)
 		assert.False(t, keys[key], "generated duplicate key")
 		keys[key] = true
@@ -185,7 +179,7 @@ func TestValidateAPIKey_DeletedMember(t *testing.T) {
 }
 
 func TestAPIKeyFormat(t *testing.T) {
-	key, err := generateSecureKey()
+	key, err := GenerateAPIKey()
 	assert.NoError(t, err)
 	assert.Regexp(t, `^ak_[a-f0-9]{64}$`, key)
 }

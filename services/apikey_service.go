@@ -1,8 +1,6 @@
 package services
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"member_API/models"
 	"time"
@@ -19,18 +17,6 @@ func NewAPIKeyService(db *gorm.DB) *APIKeyService {
 	return &APIKeyService{DB: db}
 }
 
-func generateSecureKey() (string, error) {
-	bytes := make([]byte, 32)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	return "ak_" + hex.EncodeToString(bytes), nil
-}
-
-func (s *APIKeyService) GenerateAPIKey() (string, error) {
-	return generateSecureKey()
-}
-
 func (s *APIKeyService) RegenerateAPIKey(memberID uuid.UUID) (*models.Member, error) {
 	var member models.Member
 	if err := s.DB.Where("id = ? AND is_deleted = ?", memberID, false).First(&member).Error; err != nil {
@@ -40,7 +26,7 @@ func (s *APIKeyService) RegenerateAPIKey(memberID uuid.UUID) (*models.Member, er
 		return nil, err
 	}
 
-	newKey, err := generateSecureKey()
+	newKey, err := GenerateAPIKey()
 	if err != nil {
 		return nil, err
 	}

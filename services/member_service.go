@@ -1,6 +1,8 @@
 package services
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"member_API/auth"
 	"member_API/models"
@@ -9,6 +11,18 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+// GenerateAPIKey 生成安全的 API Key
+// 格式：ak_ + 64 個十六進制字元（代表 32 bytes 的隨機數據）
+// 總長度：67 個字元
+// 安全性：256 bits 的熵值
+func GenerateAPIKey() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return "ak_" + hex.EncodeToString(bytes), nil
+}
 
 type MemberService struct {
 	DB *gorm.DB
@@ -33,8 +47,7 @@ func (s *MemberService) CreateMember(name, email, password string, creatorId uui
 	}
 
 	// 生成 API Key
-	apiKeySvc := NewAPIKeyService(s.DB)
-	apiKey, err := apiKeySvc.GenerateAPIKey()
+	apiKey, err := GenerateAPIKey()
 	if err != nil {
 		return nil, err
 	}
