@@ -13,9 +13,16 @@ import (
 )
 
 // GenerateAPIKey 生成安全的 API Key
-// 格式：ak_ + 64 個十六進制字元（代表 32 bytes 的隨機數據）
+//
+// 回傳格式：ak_ + 64 個十六進制字元（代表 32 bytes 的隨機數據）
+// 範例：ak_1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+//
 // 總長度：67 個字元
-// 安全性：256 bits 的熵值
+// 安全性：256 bits 的熵值（使用 crypto/rand 生成）
+//
+// 回傳值：
+//   - string: 生成的 API Key
+//   - error: 若隨機數生成失敗則返回錯誤
 func GenerateAPIKey() (string, error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
