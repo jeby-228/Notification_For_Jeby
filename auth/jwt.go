@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"errors"
 	"os"
 	"time"
 
@@ -46,17 +45,12 @@ func GenerateToken(userID int64, email string) (string, error) {
 // ValidateToken 驗證 JWT token
 func ValidateToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
-
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return jwtSecret, nil
 	})
 
-	if err != nil {
+	if err != nil || !token.Valid {
 		return nil, err
-	}
-
-	if !token.Valid {
-		return nil, errors.New("invalid token")
 	}
 
 	return claims, nil
