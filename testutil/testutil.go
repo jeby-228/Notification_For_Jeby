@@ -57,5 +57,3 @@ func CreateTestMember(t *testing.T, db *gorm.DB, email string) *models.Member {
 
 	return member
 }
-
-
