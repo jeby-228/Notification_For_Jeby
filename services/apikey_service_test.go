@@ -1,36 +1,17 @@
 package services
 
 import (
+	"member_API/testutil"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func setupTestDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
-	sqlDB, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("failed to create mock: %v", err)
-	}
-
-	dialector := postgres.New(postgres.Config{
-		Conn:       sqlDB,
-		DriverName: "postgres",
-	})
-
-	db, err := gorm.Open(dialector, &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to open gorm db: %v", err)
-	}
-
-	return db, mock
-}
-
 func TestGenerateAPIKey(t *testing.T) {
-	db, _ := setupTestDB(t)
+	db, _ := testutil.SetupTestDB(t)
 	svc := NewAPIKeyService(db)
 
 	key, err := svc.GenerateAPIKey()
@@ -41,7 +22,7 @@ func TestGenerateAPIKey(t *testing.T) {
 }
 
 func TestGenerateAPIKey_Uniqueness(t *testing.T) {
-	db, _ := setupTestDB(t)
+	db, _ := testutil.SetupTestDB(t)
 	svc := NewAPIKeyService(db)
 
 	keys := make(map[string]bool)
@@ -54,7 +35,7 @@ func TestGenerateAPIKey_Uniqueness(t *testing.T) {
 }
 
 func TestRegenerateAPIKey_Success(t *testing.T) {
-	db, mock := setupTestDB(t)
+	db, mock := testutil.SetupTestDB(t)
 	svc := NewAPIKeyService(db)
 
 	memberID := uuid.New()
@@ -84,7 +65,7 @@ func TestRegenerateAPIKey_Success(t *testing.T) {
 }
 
 func TestRegenerateAPIKey_MemberNotFound(t *testing.T) {
-	db, mock := setupTestDB(t)
+	db, mock := testutil.SetupTestDB(t)
 	svc := NewAPIKeyService(db)
 
 	memberID := uuid.New()
@@ -104,7 +85,7 @@ func TestRegenerateAPIKey_MemberNotFound(t *testing.T) {
 }
 
 func TestValidateAPIKey_Success(t *testing.T) {
-	db, mock := setupTestDB(t)
+	db, mock := testutil.SetupTestDB(t)
 	svc := NewAPIKeyService(db)
 
 	memberID := uuid.New()
@@ -138,7 +119,7 @@ func TestValidateAPIKey_Success(t *testing.T) {
 }
 
 func TestValidateAPIKey_InvalidKey(t *testing.T) {
-	db, mock := setupTestDB(t)
+	db, mock := testutil.SetupTestDB(t)
 	svc := NewAPIKeyService(db)
 
 	apiKey := "ak_invalid_key"
@@ -159,7 +140,7 @@ func TestValidateAPIKey_InvalidKey(t *testing.T) {
 }
 
 func TestValidateAPIKey_NoTenant(t *testing.T) {
-	db, mock := setupTestDB(t)
+	db, mock := testutil.SetupTestDB(t)
 	svc := NewAPIKeyService(db)
 
 	memberID := uuid.New()
@@ -184,7 +165,7 @@ func TestValidateAPIKey_NoTenant(t *testing.T) {
 }
 
 func TestValidateAPIKey_DeletedMember(t *testing.T) {
-	db, mock := setupTestDB(t)
+	db, mock := testutil.SetupTestDB(t)
 	svc := NewAPIKeyService(db)
 
 	apiKey := "ak_deleted_member_key"

@@ -227,18 +227,14 @@ func RegenerateAPIKey(c *gin.Context) {
 		return
 	}
 
-	memberID, err := uuid.Parse(string(rune(idValue)))
-	if err != nil {
-		var member models.Member
-		if err := db.WithContext(c.Request.Context()).First(&member, idValue).Error; err != nil {
-			respondError(c, http.StatusInternalServerError, "無法找到會員")
-			return
-		}
-		memberID = member.ID
+	var member models.Member
+	if err := db.WithContext(c.Request.Context()).First(&member, idValue).Error; err != nil {
+		respondError(c, http.StatusInternalServerError, "無法找到會員")
+		return
 	}
 
 	svc := services.NewAPIKeyService(db)
-	member, err := svc.RegenerateAPIKey(memberID)
+	updatedMember, err := svc.RegenerateAPIKey(member.ID)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, err.Error())
 		return
@@ -246,7 +242,7 @@ func RegenerateAPIKey(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "API Key 已重新生成",
-		"api_key": member.APIKey,
+		"api_key": updatedMember.APIKey,
 	})
 }
 

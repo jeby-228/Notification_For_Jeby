@@ -2,6 +2,7 @@ package auth
 
 import (
 	"member_API/models"
+	"member_API/testutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,28 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
-
-func setupTestDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
-	sqlDB, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("failed to create mock: %v", err)
-	}
-
-	dialector := postgres.New(postgres.Config{
-		Conn:       sqlDB,
-		DriverName: "postgres",
-	})
-
-	db, err := gorm.Open(dialector, &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to open gorm db: %v", err)
-	}
-
-	return db, mock
-}
 
 func TestAPIKeyMiddleware_MissingAPIKey(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -50,7 +31,7 @@ func TestAPIKeyMiddleware_MissingAPIKey(t *testing.T) {
 
 func TestAPIKeyMiddleware_InvalidAPIKey(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db, mock := setupTestDB(t)
+	db, mock := testutil.SetupTestDB(t)
 	SetAPIKeyMiddlewareDB(db)
 
 	mock.ExpectQuery(`SELECT \* FROM "members"`).
@@ -75,7 +56,7 @@ func TestAPIKeyMiddleware_InvalidAPIKey(t *testing.T) {
 
 func TestAPIKeyMiddleware_ValidAPIKey_XAPIKey(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db, mock := setupTestDB(t)
+	db, mock := testutil.SetupTestDB(t)
 	SetAPIKeyMiddlewareDB(db)
 
 	memberID := uuid.New()
@@ -141,7 +122,7 @@ func TestAPIKeyMiddleware_ValidAPIKey_XAPIKey(t *testing.T) {
 
 func TestAPIKeyMiddleware_ValidAPIKey_Authorization(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db, mock := setupTestDB(t)
+	db, mock := testutil.SetupTestDB(t)
 	SetAPIKeyMiddlewareDB(db)
 
 	memberID := uuid.New()
@@ -186,7 +167,7 @@ func TestAPIKeyMiddleware_ValidAPIKey_Authorization(t *testing.T) {
 
 func TestAPIKeyMiddleware_Cache(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db, mock := setupTestDB(t)
+	db, mock := testutil.SetupTestDB(t)
 	SetAPIKeyMiddlewareDB(db)
 
 	memberID := uuid.New()
@@ -270,7 +251,7 @@ func TestAPIKeyMiddleware_CacheExpiration(t *testing.T) {
 
 func TestAPIKeyMiddleware_NoTenant(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	db, mock := setupTestDB(t)
+	db, mock := testutil.SetupTestDB(t)
 	SetAPIKeyMiddlewareDB(db)
 
 	memberID := uuid.New()
