@@ -76,14 +76,12 @@ func initPostgreSQL() error {
 
 	if err := gormDB.WithContext(ctx).AutoMigrate(
 		&models.Member{},
-		&models.Product{},
 	); err != nil {
 		return err
 	}
 
 	db = gormDB
 	controllers.SetupUserController(db)
-	controllers.SetupProductController(db)
 
 	log.Println("Connected to PostgreSQL!")
 	return nil

@@ -22,7 +22,6 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 	// Auto migrate the schema
 	err = db.AutoMigrate(
 		&models.Member{},
-		&models.Product{},
 	)
 	if err != nil {
 		t.Fatalf("Failed to migrate test database: %v", err)
@@ -59,23 +58,4 @@ func CreateTestMember(t *testing.T, db *gorm.DB, email string) *models.Member {
 	return member
 }
 
-// CreateTestProduct creates a test product in the database
-func CreateTestProduct(t *testing.T, db *gorm.DB, name string) *models.Product {
-	product := &models.Product{
-		ProductName:        name,
-		ProductPrice:       99.99,
-		ProductDescription: "Test product description",
-		ProductImage:       "test.jpg",
-		ProductStock:       100,
-		Base: models.Base{
-			CreatorId: 1,
-			IsDeleted: false,
-		},
-	}
 
-	if err := db.Create(product).Error; err != nil {
-		t.Fatalf("Failed to create test product: %v", err)
-	}
-
-	return product
-}

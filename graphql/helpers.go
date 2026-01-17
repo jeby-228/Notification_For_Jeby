@@ -28,29 +28,6 @@ func dbToModel(m models.Member) *model.Member {
 	}
 }
 
-// productDBToModel converts DB Product to GraphQL model
-func productDBToModel(p models.Product) *model.Product {
-	var created, updated *string
-	if !p.CreationTime.IsZero() {
-		s := formatTime(p.CreationTime)
-		created = &s
-	}
-	if p.LastModificationTime != nil && !p.LastModificationTime.IsZero() {
-		s := formatTime(*p.LastModificationTime)
-		updated = &s
-	}
-	return &model.Product{
-		ID:                 formatID(p.ID),
-		ProductName:        p.ProductName,
-		ProductPrice:       p.ProductPrice,
-		ProductDescription: stringPtr(p.ProductDescription),
-		ProductImage:       stringPtr(p.ProductImage),
-		ProductStock:       p.ProductStock,
-		CreatedAt:          created,
-		UpdatedAt:          updated,
-	}
-}
-
 // formatTime formats time to RFC3339 string
 func formatTime(t time.Time) string {
 	return t.UTC().Format(time.RFC3339)

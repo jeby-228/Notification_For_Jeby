@@ -68,8 +68,55 @@ func (r *mutationResolver) DeleteMember(ctx context.Context, id string) (bool, e
 	return true, nil
 }
 
-// CreateProduct is the resolver for the createProduct field.
-func (r *mutationResolver) CreateProduct(ctx context.Context, input model.CreateProductInput) (*model.Product, error) {
+// Member is the resolver for the member field.
+func (r *queryResolver) Member(ctx context.Context, id string) (*model.Member, error) {
+	if r.DB == nil {
+		return nil, nil
+	}
+	var m models.Member
+	if err := r.DB.First(&m, id).Error; err != nil {
+		return nil, nil
+	}
+	return dbToModel(m), nil
+}
+
+// Members is the resolver for the members field.
+func (r *queryResolver) Members(ctx context.Context, limit *int) ([]*model.Member, error) {
+	if r.DB == nil {
+		return []*model.Member{}, nil
+	}
+	lim := 50
+	if limit != nil && *limit > 0 {
+		lim = *limit
+	}
+	var rows []models.Member
+	if err := r.DB.Select("id", "name", "email", "created_at", "updated_at").Limit(lim).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]*model.Member, len(rows))
+	for i, m := range rows {
+		out[i] = dbToModel(m)
+	}
+	return out, nil
+}
+
+// Mutation returns MutationResolver implementation.
+func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
+
+// Query returns QueryResolver implementation.
+func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
+
+type mutationResolver struct{ *Resolver }
+type queryResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+/*
+	func (r *mutationResolver) CreateProduct(ctx context.Context, input model.CreateProductInput) (*model.Product, error) {
 	if r.DB == nil {
 		return nil, fmt.Errorf("database connection not configured")
 	}
@@ -93,8 +140,6 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input model.Create
 
 	return productDBToModel(product), nil
 }
-
-// UpdateProduct is the resolver for the updateProduct field.
 func (r *mutationResolver) UpdateProduct(ctx context.Context, id string, input model.UpdateProductInput) (*model.Product, error) {
 	if r.DB == nil {
 		return nil, fmt.Errorf("database connection not configured")
@@ -142,8 +187,6 @@ func (r *mutationResolver) UpdateProduct(ctx context.Context, id string, input m
 
 	return productDBToModel(product), nil
 }
-
-// DeleteProduct is the resolver for the deleteProduct field.
 func (r *mutationResolver) DeleteProduct(ctx context.Context, id string) (bool, error) {
 	if r.DB == nil {
 		return false, fmt.Errorf("database connection not configured")
@@ -165,40 +208,6 @@ func (r *mutationResolver) DeleteProduct(ctx context.Context, id string) (bool, 
 
 	return true, nil
 }
-
-// Member is the resolver for the member field.
-func (r *queryResolver) Member(ctx context.Context, id string) (*model.Member, error) {
-	if r.DB == nil {
-		return nil, nil
-	}
-	var m models.Member
-	if err := r.DB.First(&m, id).Error; err != nil {
-		return nil, nil
-	}
-	return dbToModel(m), nil
-}
-
-// Members is the resolver for the members field.
-func (r *queryResolver) Members(ctx context.Context, limit *int) ([]*model.Member, error) {
-	if r.DB == nil {
-		return []*model.Member{}, nil
-	}
-	lim := 50
-	if limit != nil && *limit > 0 {
-		lim = *limit
-	}
-	var rows []models.Member
-	if err := r.DB.Select("id", "name", "email", "created_at", "updated_at").Limit(lim).Find(&rows).Error; err != nil {
-		return nil, err
-	}
-	out := make([]*model.Member, len(rows))
-	for i, m := range rows {
-		out[i] = dbToModel(m)
-	}
-	return out, nil
-}
-
-// Product is the resolver for the product field.
 func (r *queryResolver) Product(ctx context.Context, id string) (*model.Product, error) {
 	if r.DB == nil {
 		return nil, nil
@@ -211,8 +220,6 @@ func (r *queryResolver) Product(ctx context.Context, id string) (*model.Product,
 
 	return productDBToModel(product), nil
 }
-
-// Products is the resolver for the products field.
 func (r *queryResolver) Products(ctx context.Context, limit *int, offset *int) (*model.ProductsResponse, error) {
 	if r.DB == nil {
 		return &model.ProductsResponse{
@@ -266,12 +273,4 @@ func (r *queryResolver) Products(ctx context.Context, limit *int, offset *int) (
 		Offset:   off,
 	}, nil
 }
-
-// Mutation returns MutationResolver implementation.
-func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
-
-// Query returns QueryResolver implementation.
-func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
-
-type mutationResolver struct{ *Resolver }
-type queryResolver struct{ *Resolver }
+*/
