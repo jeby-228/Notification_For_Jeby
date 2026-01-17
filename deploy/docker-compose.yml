@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   notification_for_jeby:
     image: docker pull ghcr.io/jeby-228/notification_for_jeby:latest
