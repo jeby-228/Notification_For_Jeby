@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  member_api:
-    image: ghcr.io/jebylinjbjob/member_api:latest
-    container_name: member_api
+  notification_for_jeby:
+    image: docker pull ghcr.io/jeby-228/notification_for_jeby:latest
+    container_name: notification_for_jeby
     restart: unless-stopped
     ports:
       - '9876:9876'
@@ -13,13 +13,13 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
-      - member_api_network
+      - notification_for_jeby_network
     labels:
       - 'com.centurylinklabs.watchtower.enable=true'
 
   watchtower:
     image: containrrr/watchtower:latest
-    container_name: member_api_watchtower
+    container_name: notification_for_jeby_watchtower
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -29,8 +29,8 @@ services:
       - WATCHTOWER_LABEL_ENABLE=${WATCHTOWER_LABEL_ENABLE}
       - WATCHTOWER_INCLUDE_RESTARTING=${WATCHTOWER_INCLUDE_RESTARTING}
     networks:
-      - member_api_network
+      - notification_for_jeby_network
 
 networks:
-  member_api_network:
+  notification_for_jeby_network:
     driver: bridge
