@@ -32,6 +32,13 @@ func (s *MemberService) CreateMember(name, email, password string, creatorId uui
 		return nil, err
 	}
 
+	// 生成 API Key
+	apiKeySvc := NewAPIKeyService(s.DB)
+	apiKey, err := apiKeySvc.GenerateAPIKey()
+	if err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 	member := &models.Member{
 		Base: models.Base{
@@ -42,6 +49,7 @@ func (s *MemberService) CreateMember(name, email, password string, creatorId uui
 		Name:         name,
 		Email:        email,
 		PasswordHash: hash,
+		APIKey:       apiKey,
 	}
 
 	if err := s.DB.Create(member).Error; err != nil {

@@ -204,3 +204,89 @@ func GetProfile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"user": memberToUser(&member)})
 }
+
+// RegenerateAPIKey 重新生成 API Key
+// @Summary 重新生成 API Key
+// @Description 重新生成當前用戶的 API Key，舊的 API Key 將失效
+// @Tags 認證
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]string "重新生成成功"
+// @Failure 401 {object} map[string]string "未認證"
+// @Failure 500 {object} map[string]string "服務器錯誤"
+// @Router /auth/regenerate-key [post]
+func RegenerateAPIKey(c *gin.Context) {
+	idValue, ok := getUserFromContext(c)
+	if !ok {
+		respondError(c, http.StatusUnauthorized, "未認證")
+		return
+	}
+
+	if !checkDB(c) {
+		return
+	}
+
+	memberID, err := uuid.Parse(string(rune(idValue)))
+	if err != nil {
+		var member models.Member
+		if err := db.WithContext(c.Request.Context()).First(&member, idValue).Error; err != nil {
+			respondError(c, http.StatusInternalServerError, "無法找到會員")
+			return
+		}
+		memberID = member.ID
+	}
+
+	svc := services.NewAPIKeyService(db)
+	member, err := svc.RegenerateAPIKey(memberID)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "API Key 已重新生成",
+		"api_key": member.APIKey,
+	})
+}
+
+// VerifyAPIKey 驗證 API Key
+// @Summary 驗證 API Key 是否有效
+// @Description 驗證提供的 API Key 是否有效並返回會員資訊
+// @Tags 認證
+// @Accept json
+// @Produce json
+// @Param X-API-Key header string false "API Key"
+// @Param Authorization header string false "API Key (格式: ApiKey {key})"
+// @Success 200 {object} map[string]interface{} "API Key 有效"
+// @Failure 401 {object} map[string]string "無效的 API Key"
+// @Failure 500 {object} map[string]string "服務器錯誤"
+// @Router /auth/verify-key [get]
+func VerifyAPIKey(c *gin.Context) {
+	member, exists := c.Get("member")
+	if !exists {
+		respondError(c, http.StatusUnauthorized, "無效的 API Key")
+		return
+	}
+
+	memberData := member.(*models.Member)
+	response := gin.H{
+		"valid": true,
+		"member": gin.H{
+			"id":    memberData.ID,
+			"name":  memberData.Name,
+			"email": memberData.Email,
+		},
+	}
+
+	if tenant, exists := c.Get("tenant"); exists {
+		tenantData := tenant.(*models.Tenants)
+		response["tenant"] = gin.H{
+			"id":          tenantData.ID,
+			"name":        tenantData.Name,
+			"description": tenantData.Description,
+		}
+	}
+
+	c.JSON(http.StatusOK, response)
+}

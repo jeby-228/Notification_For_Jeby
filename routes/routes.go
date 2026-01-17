@@ -27,5 +27,12 @@ func SetupRouter(Router *gin.Engine) {
 		})
 		protected.GET("/profile", controllers.GetProfile)
 		protected.DELETE("/user/:id", controllers.DeleteUserByID)
+		protected.POST("/auth/regenerate-key", controllers.RegenerateAPIKey)
+	}
+
+	apiKeyProtected := Router.Group("/api/v1")
+	apiKeyProtected.Use(auth.APIKeyMiddleware())
+	{
+		apiKeyProtected.GET("/auth/verify-key", controllers.VerifyAPIKey)
 	}
 }
