@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // Base 基礎模型結構，包含通用的審計欄位
@@ -16,4 +17,12 @@ type Base struct {
 	LastModifierId       uuid.UUID  `json:"last_modifier_id"`
 	IsDeleted            bool       `gorm:"default:false" json:"-"`
 	DeletedAt            *time.Time `gorm:"index" json:"-"`
+}
+
+// BeforeCreate hook to auto-generate UUID
+func (b *Base) BeforeCreate(tx *gorm.DB) error {
+	if b.ID == uuid.Nil {
+		b.ID = uuid.New()
+	}
+	return nil
 }

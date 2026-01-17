@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"member_API/testutil"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 func TestMemberService_CreateMember(t *testing.T) {
@@ -21,7 +23,7 @@ func TestMemberService_CreateMember(t *testing.T) {
 		userName  string
 		email     string
 		password  string
-		creatorId uint
+		creatorId uuid.UUID
 		wantErr   bool
 	}{
 		{
@@ -29,7 +31,7 @@ func TestMemberService_CreateMember(t *testing.T) {
 			userName:  "John Doe",
 			email:     "john@example.com",
 			password:  "password123",
-			creatorId: 1,
+			creatorId: uuid.New(),
 			wantErr:   false,
 		},
 		{
@@ -37,7 +39,7 @@ func TestMemberService_CreateMember(t *testing.T) {
 			userName:  "Jane Doe",
 			email:     "john@example.com",
 			password:  "password123",
-			creatorId: 1,
+			creatorId: uuid.New(),
 			wantErr:   true,
 		},
 		{
@@ -45,7 +47,7 @@ func TestMemberService_CreateMember(t *testing.T) {
 			userName:  "Jane Smith",
 			email:     "jane@example.com",
 			password:  "password456",
-			creatorId: 1,
+			creatorId: uuid.New(),
 			wantErr:   false,
 		},
 	}
@@ -90,14 +92,14 @@ func TestMemberService_GetMemberByID(t *testing.T) {
 	service := NewMemberService(db)
 
 	// Create a test member
-	created, err := service.CreateMember("Test User", "test@example.com", "password", 1)
+	created, err := service.CreateMember("Test User", "test@example.com", "password", uuid.New())
 	if err != nil {
 		t.Fatalf("Failed to create test member: %v", err)
 	}
 
 	tests := []struct {
 		name    string
-		id      uint
+		id      uuid.UUID
 		wantErr bool
 	}{
 		{
@@ -107,7 +109,7 @@ func TestMemberService_GetMemberByID(t *testing.T) {
 		},
 		{
 			name:    "Non-existing member",
-			id:      9999,
+			id:      uuid.New(),
 			wantErr: true,
 		},
 	}
@@ -145,7 +147,7 @@ func TestMemberService_GetMembers(t *testing.T) {
 	// Create multiple test members
 	for i := 0; i < 5; i++ {
 		email := fmt.Sprintf("test%d@example.com", i)
-		_, err := service.CreateMember("Test User", email, "password", 1)
+		_, err := service.CreateMember("Test User", email, "password", uuid.New())
 		if err != nil {
 			t.Fatalf("Failed to create test member: %v", err)
 		}
@@ -198,17 +200,19 @@ func TestMemberService_UpdateMember(t *testing.T) {
 	service := NewMemberService(db)
 
 	// Create a test member
-	created, err := service.CreateMember("Test User", "test@example.com", "password", 1)
+	created, err := service.CreateMember("Test User", "test@example.com", "password", uuid.New())
 	if err != nil {
 		t.Fatalf("Failed to create test member: %v", err)
 	}
 
+	modifierID := uuid.New()
+
 	tests := []struct {
 		name       string
-		id         uint
+		id         uuid.UUID
 		newName    string
 		newEmail   string
-		modifierId uint
+		modifierId uuid.UUID
 		wantErr    bool
 	}{
 		{
@@ -216,15 +220,15 @@ func TestMemberService_UpdateMember(t *testing.T) {
 			id:         created.ID,
 			newName:    "Updated Name",
 			newEmail:   "updated@example.com",
-			modifierId: 2,
+			modifierId: modifierID,
 			wantErr:    false,
 		},
 		{
 			name:       "Update non-existing member",
-			id:         9999,
+			id:         uuid.New(),
 			newName:    "Name",
 			newEmail:   "email@example.com",
-			modifierId: 2,
+			modifierId: modifierID,
 			wantErr:    true,
 		},
 	}
@@ -269,33 +273,35 @@ func TestMemberService_DeleteMember(t *testing.T) {
 	service := NewMemberService(db)
 
 	// Create a test member
-	created, err := service.CreateMember("Test User", "test@example.com", "password", 1)
+	created, err := service.CreateMember("Test User", "test@example.com", "password", uuid.New())
 	if err != nil {
 		t.Fatalf("Failed to create test member: %v", err)
 	}
 
+	deleterID := uuid.New()
+
 	tests := []struct {
 		name      string
-		id        uint
-		deleterId uint
+		id        uuid.UUID
+		deleterId uuid.UUID
 		wantErr   bool
 	}{
 		{
 			name:      "Valid delete",
 			id:        created.ID,
-			deleterId: 2,
+			deleterId: deleterID,
 			wantErr:   false,
 		},
 		{
 			name:      "Delete non-existing member",
-			id:        9999,
-			deleterId: 2,
+			id:        uuid.New(),
+			deleterId: deleterID,
 			wantErr:   true,
 		},
 		{
 			name:      "Delete already deleted member",
 			id:        created.ID,
-			deleterId: 2,
+			deleterId: deleterID,
 			wantErr:   true,
 		},
 	}

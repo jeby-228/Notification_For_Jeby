@@ -4,8 +4,9 @@ import (
 	"context"
 	"member_API/graphql/model"
 	"member_API/models"
-	"strconv"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // dbToModel converts DB Member to GraphQL model
@@ -33,18 +34,22 @@ func formatTime(t time.Time) string {
 	return t.UTC().Format(time.RFC3339)
 }
 
-// formatID converts uint ID to string
-func formatID(id uint) string {
-	return strconv.FormatUint(uint64(id), 10)
+// formatID converts UUID to string
+func formatID(id uuid.UUID) string {
+	return id.String()
 }
 
 // getUserIDFromContext extracts user ID from context
-func getUserIDFromContext(ctx context.Context) uint {
-	userID, ok := ctx.Value("user_id").(int64)
-	if !ok || userID <= 0 {
-		return 0
+func getUserIDFromContext(ctx context.Context) uuid.UUID {
+	userIDStr, ok := ctx.Value("user_id").(string)
+	if !ok || userIDStr == "" {
+		return uuid.Nil
 	}
-	return uint(userID)
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return uuid.Nil
+	}
+	return userID
 }
 
 // stringPtr converts string to *string pointer

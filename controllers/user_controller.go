@@ -56,7 +56,7 @@ func GetUsers(c *gin.Context) {
 
 	users := make([]User, len(members))
 	for i, member := range members {
-		users[i] = User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
+		users[i] = User{ID: int64(member.ID.ID()), Name: member.Name, Email: member.Email}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"users": users})
@@ -102,7 +102,7 @@ func GetUserByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}})
+	c.JSON(http.StatusOK, gin.H{"user": User{ID: int64(member.ID.ID()), Name: member.Name, Email: member.Email}})
 }
 
 // DeleteUserByID deletes a user by ID from the database.

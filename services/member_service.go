@@ -6,6 +6,7 @@ import (
 	"member_API/models"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -18,7 +19,7 @@ func NewMemberService(db *gorm.DB) *MemberService {
 }
 
 // CreateMember 建立新會員
-func (s *MemberService) CreateMember(name, email, password string, creatorId uint) (*models.Member, error) {
+func (s *MemberService) CreateMember(name, email, password string, creatorId uuid.UUID) (*models.Member, error) {
 	// 檢查 email 是否已存在
 	var exists models.Member
 	if err := s.DB.Where("email = ? AND is_deleted = ?", email, false).First(&exists).Error; err == nil {
@@ -51,7 +52,7 @@ func (s *MemberService) CreateMember(name, email, password string, creatorId uin
 }
 
 // UpdateMember 更新會員資訊
-func (s *MemberService) UpdateMember(id uint, name, email string, modifierId uint) (*models.Member, error) {
+func (s *MemberService) UpdateMember(id uuid.UUID, name, email string, modifierId uuid.UUID) (*models.Member, error) {
 	var member models.Member
 	if err := s.DB.Where("is_deleted = ?", false).First(&member, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -74,7 +75,7 @@ func (s *MemberService) UpdateMember(id uint, name, email string, modifierId uin
 }
 
 // DeleteMember 軟刪除會員
-func (s *MemberService) DeleteMember(id uint, deleterId uint) error {
+func (s *MemberService) DeleteMember(id uuid.UUID, deleterId uuid.UUID) error {
 	now := time.Now()
 	result := s.DB.Model(&models.Member{}).
 		Where("id = ? AND is_deleted = ?", id, false).
@@ -97,7 +98,7 @@ func (s *MemberService) DeleteMember(id uint, deleterId uint) error {
 }
 
 // GetMemberByID 取得單一會員
-func (s *MemberService) GetMemberByID(id uint) (*models.Member, error) {
+func (s *MemberService) GetMemberByID(id uuid.UUID) (*models.Member, error) {
 	var member models.Member
 	if err := s.DB.Where("is_deleted = ?", false).First(&member, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

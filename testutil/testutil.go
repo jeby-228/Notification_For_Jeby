@@ -46,7 +46,6 @@ func CreateTestMember(t *testing.T, db *gorm.DB, email string) *models.Member {
 		Email:        email,
 		PasswordHash: "test-hash",
 		Base: models.Base{
-			CreatorId: 1,
 			IsDeleted: false,
 		},
 	}

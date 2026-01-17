@@ -9,6 +9,7 @@ import (
 	"member_API/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -55,8 +56,8 @@ func Register(input *gin.Context) {
 	// 使用 Service 層建立會員（自動處理密碼加密、審計欄位等）
 	svc := services.NewMemberService(db)
 
-	// 註冊時使用 creatorId = 0 表示自行註冊
-	member, err := svc.CreateMember(req.Name, req.Email, req.Password, 0)
+	// 註冊時使用 creatorId = uuid.Nil 表示自行註冊
+	member, err := svc.CreateMember(req.Name, req.Email, req.Password, uuid.Nil)
 	if err != nil {
 		if err.Error() == "email 已被使用" {
 			input.JSON(http.StatusConflict, gin.H{"error": "該電子郵件已被註冊"})
@@ -66,7 +67,7 @@ func Register(input *gin.Context) {
 		return
 	}
 
-	user := User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
+	user := User{ID: int64(member.ID.ID()), Name: member.Name, Email: member.Email}
 
 	// 生成 token
 	token, err := auth.GenerateToken(user.ID, user.Email)
@@ -126,7 +127,7 @@ func Login(input *gin.Context) {
 		return
 	}
 
-	user := User{ID: int64(member.ID), Name: member.Name, Email: member.Email}
+	user := User{ID: int64(member.ID.ID()), Name: member.Name, Email: member.Email}
 
 	// 生成 token
 	token, err := auth.GenerateToken(user.ID, user.Email)
@@ -183,5 +184,5 @@ func GetProfile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": User{ID: int64(member.ID), Name: member.Name, Email: member.Email}})
+	c.JSON(http.StatusOK, gin.H{"user": User{ID: int64(member.ID.ID()), Name: member.Name, Email: member.Email}})
 }
