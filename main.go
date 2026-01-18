@@ -11,6 +11,7 @@ import (
 	_ "member_API/docs"
 	"member_API/models"
 	"member_API/routes"
+	"member_API/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -41,6 +42,11 @@ import (
 // @in header
 // @name Authorization
 // @description JWT 認證，格式：Bearer {token}
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-Key
+// @description API Key 認證
 
 var db *gorm.DB
 
@@ -87,6 +93,9 @@ func initPostgreSQL(cfg *config.Config) error {
 	db = gormDB
 	controllers.SetupUserController(db)
 	auth.SetAPIKeyMiddlewareDB(db)
+
+	smsService := services.NewSMSService(db, nil)
+	controllers.SetupSMSController(smsService)
 
 	log.Println("Connected to PostgreSQL")
 	return nil
