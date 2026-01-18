@@ -18,11 +18,11 @@ func SetupFirebaseController(db *gorm.DB) {
 
 // SendPushNotificationRequest 發送推播請求結構
 type SendPushNotificationRequest struct {
-	MemberID    *string            `json:"member_id"`
-	DeviceToken *string            `json:"device_token"`
-	Title       string             `json:"title" binding:"required"`
-	Body        string             `json:"body" binding:"required"`
-	Data        map[string]string  `json:"data"`
+	MemberID    *string           `json:"member_id"`
+	DeviceToken *string           `json:"device_token"`
+	Title       string            `json:"title" binding:"required"`
+	Body        string            `json:"body" binding:"required"`
+	Data        map[string]string `json:"data"`
 }
 
 // RegisterDeviceTokenRequest 註冊設備 Token 請求結構

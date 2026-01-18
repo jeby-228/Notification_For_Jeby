@@ -244,9 +244,9 @@ func TestSendPushNotification(t *testing.T) {
 
 func TestSetupFirebaseController(t *testing.T) {
 	db, _ := testutil.SetupTestDB(t)
-	
+
 	SetupFirebaseController(db)
-	
+
 	assert.NotNil(t, firebaseService)
 	assert.IsType(t, &services.FirebaseService{}, firebaseService)
 }

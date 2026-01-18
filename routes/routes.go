@@ -31,7 +31,7 @@ func SetupRouter(Router *gin.Engine) {
 
 		// 推播通知相關路由
 		protected.POST("/notifications/push", controllers.SendPushNotification)
-		
+
 		// 設備管理相關路由
 		protected.POST("/devices/register", controllers.RegisterDeviceToken)
 		protected.DELETE("/devices/:token", controllers.DeleteDeviceToken)

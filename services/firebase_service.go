@@ -20,10 +20,10 @@ import (
 
 // FirebaseService 管理 Firebase 推播服務
 type FirebaseService struct {
-	DB       *gorm.DB
-	apps     map[uuid.UUID]*firebase.App // tenant_id -> firebase app
-	clients  map[uuid.UUID]*messaging.Client
-	mu       sync.RWMutex
+	DB      *gorm.DB
+	apps    map[uuid.UUID]*firebase.App // tenant_id -> firebase app
+	clients map[uuid.UUID]*messaging.Client
+	mu      sync.RWMutex
 }
 
 // NewFirebaseService 建立新的 Firebase 服務
@@ -94,7 +94,7 @@ func (s *FirebaseService) ValidateToken(ctx context.Context, tenantID uuid.UUID,
 		return false, err
 	}
 
-	// 嘗試發送空的測試訊息來驗證 token
+	// 使用 DryRun 模式測試 token（不實際發送）
 	message := &messaging.Message{
 		Token: token,
 		Data: map[string]string{
@@ -102,8 +102,8 @@ func (s *FirebaseService) ValidateToken(ctx context.Context, tenantID uuid.UUID,
 		},
 	}
 
-	// 使用 DryRun 模式測試
-	_, err = client.Send(ctx, message)
+	// DryRun 模式只驗證不發送
+	_, err = client.SendDryRun(ctx, message)
 	if err != nil {
 		// 檢查錯誤類型
 		if messaging.IsInvalidArgument(err) || messaging.IsRegistrationTokenNotRegistered(err) {
@@ -133,15 +133,15 @@ func (s *FirebaseService) SendToToken(ctx context.Context, tenantID uuid.UUID, m
 
 	// 發送訊息
 	response, err := client.Send(ctx, message)
-	
+
 	now := time.Now()
 	notificationLog := models.NotificationLog{
-		MemberID:   memberID,
-		Type:       models.ProviderFirebase,
-		Subject:    title,
-		Body:       body,
-		Status:     models.StatusSent,
-		SentAt:     &now,
+		MemberID: memberID,
+		Type:     models.ProviderFirebase,
+		Subject:  title,
+		Body:     body,
+		Status:   models.StatusSent,
+		SentAt:   &now,
 	}
 
 	// 取得 provider ID
@@ -153,22 +153,22 @@ func (s *FirebaseService) SendToToken(ctx context.Context, tenantID uuid.UUID, m
 	if err != nil {
 		notificationLog.Status = models.StatusFailed
 		notificationLog.ErrorMsg = err.Error()
-		
+
 		// 如果是無效 token，自動停用
 		if messaging.IsInvalidArgument(err) || messaging.IsRegistrationTokenNotRegistered(err) {
 			s.DeactivateToken(token)
 		}
-		
+
 		// 記錄失敗日誌
 		s.DB.Create(&notificationLog)
 		return err
 	}
 
 	log.Printf("Successfully sent message: %s", response)
-	
+
 	// 記錄成功日誌
 	s.DB.Create(&notificationLog)
-	
+
 	return nil
 }
 
@@ -261,29 +261,33 @@ func (s *FirebaseService) SendToMember(ctx context.Context, tenantID uuid.UUID, 
 
 // DeactivateToken 停用無效的 Device Token
 func (s *FirebaseService) DeactivateToken(token string) error {
+	now := time.Now()
 	result := s.DB.Model(&models.MemberDeviceToken{}).
 		Where("device_token = ?", token).
-		Update("is_active", false)
-	
+		Updates(map[string]interface{}{
+			"is_active":              false,
+			"last_modification_time": now,
+		})
+
 	if result.Error != nil {
 		return result.Error
 	}
-	
+
 	if result.RowsAffected > 0 {
 		log.Printf("Deactivated invalid token: %s", token)
 	}
-	
+
 	return nil
 }
 
 // RegisterDeviceToken 註冊新的設備 Token
 func (s *FirebaseService) RegisterDeviceToken(memberID uuid.UUID, deviceToken, deviceType string) error {
 	now := time.Now()
-	
+
 	// 使用 upsert 邏輯
 	var existingToken models.MemberDeviceToken
 	err := s.DB.Where("member_id = ? AND device_token = ?", memberID, deviceToken).First(&existingToken).Error
-	
+
 	if err == nil {
 		// Token 已存在，更新狀態和最後使用時間
 		existingToken.IsActive = true
@@ -291,11 +295,11 @@ func (s *FirebaseService) RegisterDeviceToken(memberID uuid.UUID, deviceToken, d
 		existingToken.DeviceType = deviceType
 		return s.DB.Save(&existingToken).Error
 	}
-	
+
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
-	
+
 	// 建立新 Token
 	newToken := models.MemberDeviceToken{
 		MemberID:    memberID,
@@ -304,22 +308,22 @@ func (s *FirebaseService) RegisterDeviceToken(memberID uuid.UUID, deviceToken, d
 		IsActive:    true,
 		LastUsedAt:  &now,
 	}
-	
+
 	return s.DB.Create(&newToken).Error
 }
 
 // DeleteDeviceToken 刪除設備 Token
 func (s *FirebaseService) DeleteDeviceToken(token string) error {
 	result := s.DB.Where("device_token = ?", token).Delete(&models.MemberDeviceToken{})
-	
+
 	if result.Error != nil {
 		return result.Error
 	}
-	
+
 	if result.RowsAffected == 0 {
 		return errors.New("device token not found")
 	}
-	
+
 	return nil
 }
 
