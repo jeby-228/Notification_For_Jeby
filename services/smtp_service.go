@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/smtp"
 	"strings"
 	"time"
@@ -48,7 +49,7 @@ func (s *SMTPService) SendEmail(memberID uuid.UUID, providerID uuid.UUID, req Em
 		return fmt.Errorf("invalid smtp config: %w", err)
 	}
 
-	log := models.NotificationLog{
+	notifLog := models.NotificationLog{
 		MemberID:       memberID,
 		ProviderID:     providerID,
 		Type:           models.ProviderSMTP,
@@ -70,11 +71,10 @@ func (s *SMTPService) SendEmail(memberID uuid.UUID, providerID uuid.UUID, req Em
 		err := s.sendEmailWithConfig(config, req)
 		if err == nil {
 			now := time.Now()
-			log.Status = models.StatusSent
-			log.SentAt = &now
-			if err := s.DB.Create(&log).Error; err != nil {
-				// Log the database error but don't fail the email send operation
-				fmt.Printf("Warning: Failed to create success log: %v\n", err)
+			notifLog.Status = models.StatusSent
+			notifLog.SentAt = &now
+			if err := s.DB.Create(&notifLog).Error; err != nil {
+				log.Printf("Warning: Failed to create success log: %v", err)
 			}
 			return nil
 		}
@@ -84,11 +84,10 @@ func (s *SMTPService) SendEmail(memberID uuid.UUID, providerID uuid.UUID, req Em
 		}
 	}
 
-	log.Status = models.StatusFailed
-	log.ErrorMsg = lastErr.Error()
-	if err := s.DB.Create(&log).Error; err != nil {
-		// Log the database error but don't fail the operation
-		fmt.Printf("Warning: Failed to create failure log: %v\n", err)
+	notifLog.Status = models.StatusFailed
+	notifLog.ErrorMsg = lastErr.Error()
+	if err := s.DB.Create(&notifLog).Error; err != nil {
+		log.Printf("Warning: Failed to create failure log: %v", err)
 	}
 
 	return fmt.Errorf("failed after %d retries: %w", maxEmailRetries, lastErr)
@@ -134,7 +133,7 @@ func (s *SMTPService) sendMailTLS(addr string, auth smtp.Auth, from string, to [
 	}
 	defer func() {
 		if cerr := client.Close(); cerr != nil {
-			// Log close error but don't override the main error
+			log.Printf("Warning: Failed to close SMTP client: %v", cerr)
 		}
 	}()
 
