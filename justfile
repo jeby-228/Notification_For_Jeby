@@ -31,12 +31,6 @@ test-cov:
     go test -v -coverprofile=coverage.out ./...
     go tool cover -html=coverage.out -o coverage.html
 
-
-# 生成 GraphQL
-graphql:
-    go get github.com/99designs/gqlgen@v0.17.85
-    go run github.com/99designs/gqlgen generate
-
 # 清理
 clean:
     rm -rf bin/ coverage.out coverage.html
