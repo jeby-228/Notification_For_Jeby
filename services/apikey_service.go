@@ -24,8 +24,8 @@ func NewAPIKeyService(db *gorm.DB) *APIKeyService {
 // 回傳值：
 //   - *models.Member: 更新後的會員資料，包含新的 API Key
 //   - error: 錯誤資訊，可能的錯誤包括：
-//     - "會員不存在": 找不到指定的會員或會員已被刪除
-//     - 資料庫錯誤
+//   - "會員不存在": 找不到指定的會員或會員已被刪除
+//   - 資料庫錯誤
 //
 // 注意：舊的 API Key 將立即失效
 func (s *APIKeyService) RegenerateAPIKey(memberID uuid.UUID) (*models.Member, error) {
@@ -62,8 +62,8 @@ func (s *APIKeyService) RegenerateAPIKey(memberID uuid.UUID) (*models.Member, er
 //   - *models.Member: 對應的會員資料，若 API Key 無效則為 nil
 //   - *models.Tenants: 對應的租戶資料，可能為 nil（會員沒有租戶或租戶不存在）
 //   - error: 錯誤資訊，可能的錯誤包括：
-//     - "無效的 API Key": 找不到對應的會員或會員已被刪除
-//     - 資料庫錯誤
+//   - "無效的 API Key": 找不到對應的會員或會員已被刪除
+//   - 資料庫錯誤
 //
 // 注意：
 //   - 即使會員沒有關聯的租戶（TenantsID 為 uuid.Nil），也會成功返回會員資料

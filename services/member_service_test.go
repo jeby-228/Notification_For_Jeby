@@ -1,31 +1,15 @@
 package services
 
 import (
+	"member_API/testutil"
 	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
-
-func setupMockDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("Failed to create mock: %v", err)
-	}
-
-	gormDB, err := gorm.Open(postgres.New(postgres.Config{
-		Conn: db,
-	}), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to open gorm db: %v", err)
-	}
-
-	return gormDB, mock
-}
 
 func TestCreateMember(t *testing.T) {
 	tests := []struct {
@@ -58,7 +42,7 @@ func TestCreateMember(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db, mock := setupMockDB(t)
+			db, mock := testutil.SetupTestDB(t)
 			service := NewMemberService(db)
 
 			if tt.wantErr && tt.errMsg == "email 已被使用" {
@@ -160,7 +144,7 @@ func TestUpdateMember(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db, mock := setupMockDB(t)
+			db, mock := testutil.SetupTestDB(t)
 			service := NewMemberService(db)
 
 			tt.setupMock(mock)
@@ -231,7 +215,7 @@ func TestDeleteMember(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db, mock := setupMockDB(t)
+			db, mock := testutil.SetupTestDB(t)
 			service := NewMemberService(db)
 
 			tt.setupMock(mock)
@@ -293,7 +277,7 @@ func TestGetMemberByID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db, mock := setupMockDB(t)
+			db, mock := testutil.SetupTestDB(t)
 			service := NewMemberService(db)
 
 			tt.setupMock(mock)
@@ -367,7 +351,7 @@ func TestGetMembers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db, mock := setupMockDB(t)
+			db, mock := testutil.SetupTestDB(t)
 			service := NewMemberService(db)
 
 			tt.setupMock(mock)
