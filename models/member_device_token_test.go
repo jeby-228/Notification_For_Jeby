@@ -159,7 +159,7 @@ func TestMemberDeviceToken_DatabaseConstraints(t *testing.T) {
 	// 測試資料庫層級的約束條件
 	t.Run("Invalid device type should be rejected", func(t *testing.T) {
 		db, mock := testutil.SetupTestDB(t)
-		
+
 		memberID := uuid.New()
 		invalidToken := &MemberDeviceToken{
 			MemberID:    memberID,
@@ -167,23 +167,23 @@ func TestMemberDeviceToken_DatabaseConstraints(t *testing.T) {
 			DeviceType:  "invalid", // 無效的設備類型
 			IsActive:    true,
 		}
-		
+
 		// 預期 INSERT 會失敗，因為 device_type 不符合 CHECK 約束
 		mock.ExpectBegin()
 		mock.ExpectExec("INSERT").
 			WillReturnError(gorm.ErrCheckConstraintViolated)
 		mock.ExpectRollback()
-		
+
 		err := db.Create(invalidToken).Error
 		assert.Error(t, err, "無效的 device_type 應該被拒絕")
 	})
-	
+
 	t.Run("Composite unique constraint prevents duplicate tokens per member", func(t *testing.T) {
 		db, mock := testutil.SetupTestDB(t)
-		
+
 		memberID := uuid.New()
 		deviceToken := "duplicate-token"
-		
+
 		// 第一次插入成功
 		token1 := &MemberDeviceToken{
 			Base: Base{
@@ -194,15 +194,15 @@ func TestMemberDeviceToken_DatabaseConstraints(t *testing.T) {
 			DeviceType:  "ios",
 			IsActive:    true,
 		}
-		
+
 		mock.ExpectBegin()
 		mock.ExpectExec("INSERT").
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
-		
+
 		err := db.Create(token1).Error
 		assert.NoError(t, err, "第一次插入應該成功")
-		
+
 		// 相同會員相同 token 的第二次插入應該失敗
 		token2 := &MemberDeviceToken{
 			Base: Base{
@@ -213,23 +213,23 @@ func TestMemberDeviceToken_DatabaseConstraints(t *testing.T) {
 			DeviceType:  "android",
 			IsActive:    true,
 		}
-		
+
 		mock.ExpectBegin()
 		mock.ExpectExec("INSERT").
 			WillReturnError(gorm.ErrDuplicatedKey)
 		mock.ExpectRollback()
-		
+
 		err = db.Create(token2).Error
 		assert.Error(t, err, "相同會員的重複 token 應該被拒絕")
 	})
-	
+
 	t.Run("Same token allowed across different members", func(t *testing.T) {
 		db, mock := testutil.SetupTestDB(t)
-		
+
 		deviceToken := "shared-token"
 		member1ID := uuid.New()
 		member2ID := uuid.New()
-		
+
 		// 會員1插入成功
 		token1 := &MemberDeviceToken{
 			Base: Base{
@@ -240,15 +240,15 @@ func TestMemberDeviceToken_DatabaseConstraints(t *testing.T) {
 			DeviceType:  "ios",
 			IsActive:    true,
 		}
-		
+
 		mock.ExpectBegin()
 		mock.ExpectExec("INSERT").
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
-		
+
 		err := db.Create(token1).Error
 		assert.NoError(t, err, "會員1插入應該成功")
-		
+
 		// 會員2使用相同 token 應該也能成功
 		token2 := &MemberDeviceToken{
 			Base: Base{
@@ -259,21 +259,21 @@ func TestMemberDeviceToken_DatabaseConstraints(t *testing.T) {
 			DeviceType:  "android",
 			IsActive:    true,
 		}
-		
+
 		mock.ExpectBegin()
 		mock.ExpectExec("INSERT").
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
-		
+
 		err = db.Create(token2).Error
 		assert.NoError(t, err, "不同會員使用相同 token 應該成功")
 	})
-	
+
 	t.Run("Valid device types are accepted", func(t *testing.T) {
 		db, mock := testutil.SetupTestDB(t)
-		
+
 		validTypes := []string{"ios", "android", "web"}
-		
+
 		for _, deviceType := range validTypes {
 			token := &MemberDeviceToken{
 				Base: Base{
@@ -284,14 +284,259 @@ func TestMemberDeviceToken_DatabaseConstraints(t *testing.T) {
 				DeviceType:  deviceType,
 				IsActive:    true,
 			}
-			
+
 			mock.ExpectBegin()
 			mock.ExpectExec("INSERT").
 				WillReturnResult(sqlmock.NewResult(1, 1))
 			mock.ExpectCommit()
-			
+
 			err := db.Create(token).Error
 			assert.NoError(t, err, "有效的 device_type '%s' 應該被接受", deviceType)
 		}
+	})
+}
+
+func TestMemberDeviceToken_Query(t *testing.T) {
+	t.Run("查詢特定會員的所有設備", func(t *testing.T) {
+		db, mock := testutil.SetupTestDB(t)
+
+		memberID := uuid.New()
+
+		rows := sqlmock.NewRows([]string{"id", "member_id", "device_token", "device_type", "is_active"}).
+			AddRow(uuid.New(), memberID, "token-1", "ios", true).
+			AddRow(uuid.New(), memberID, "token-2", "android", true)
+
+		mock.ExpectQuery("SELECT (.+) FROM \"member_device_tokens\"").
+			WithArgs(memberID).
+			WillReturnRows(rows)
+
+		var tokens []MemberDeviceToken
+		err := db.Where("member_id = ?", memberID).Find(&tokens).Error
+
+		assert.NoError(t, err)
+		assert.Len(t, tokens, 2, "應該查詢到2個設備")
+	})
+
+	t.Run("查詢活躍的設備", func(t *testing.T) {
+		db, mock := testutil.SetupTestDB(t)
+
+		memberID := uuid.New()
+
+		rows := sqlmock.NewRows([]string{"id", "member_id", "device_token", "device_type", "is_active"}).
+			AddRow(uuid.New(), memberID, "active-token", "ios", true)
+
+		mock.ExpectQuery("SELECT (.+) FROM \"member_device_tokens\"").
+			WithArgs(memberID, true).
+			WillReturnRows(rows)
+
+		var tokens []MemberDeviceToken
+		err := db.Where("member_id = ? AND is_active = ?", memberID, true).Find(&tokens).Error
+
+		assert.NoError(t, err)
+		assert.Len(t, tokens, 1, "應該只查詢到活躍的設備")
+		assert.True(t, tokens[0].IsActive)
+	})
+
+	t.Run("查詢特定設備類型", func(t *testing.T) {
+		db, mock := testutil.SetupTestDB(t)
+
+		memberID := uuid.New()
+
+		rows := sqlmock.NewRows([]string{"id", "member_id", "device_token", "device_type", "is_active"}).
+			AddRow(uuid.New(), memberID, "ios-token", "ios", true)
+
+		mock.ExpectQuery("SELECT (.+) FROM \"member_device_tokens\"").
+			WithArgs(memberID, "ios").
+			WillReturnRows(rows)
+
+		var tokens []MemberDeviceToken
+		err := db.Where("member_id = ? AND device_type = ?", memberID, "ios").Find(&tokens).Error
+
+		assert.NoError(t, err)
+		assert.Len(t, tokens, 1)
+		assert.Equal(t, "ios", tokens[0].DeviceType)
+	})
+}
+
+func TestMemberDeviceToken_Update(t *testing.T) {
+	t.Run("更新設備活躍狀態", func(t *testing.T) {
+		db, mock := testutil.SetupTestDB(t)
+
+		tokenID := uuid.New()
+
+		mock.ExpectBegin()
+		mock.ExpectExec("UPDATE \"member_device_tokens\"").
+			WithArgs(false, sqlmock.AnyArg(), tokenID).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
+
+		err := db.Model(&MemberDeviceToken{}).
+			Where("id = ?", tokenID).
+			Update("is_active", false).Error
+
+		assert.NoError(t, err, "更新活躍狀態應該成功")
+	})
+
+	t.Run("更新最後使用時間", func(t *testing.T) {
+		db, mock := testutil.SetupTestDB(t)
+
+		tokenID := uuid.New()
+		lastUsedAt := time.Now()
+
+		mock.ExpectBegin()
+		mock.ExpectExec("UPDATE \"member_device_tokens\"").
+			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), tokenID).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
+
+		err := db.Model(&MemberDeviceToken{}).
+			Where("id = ?", tokenID).
+			Update("last_used_at", lastUsedAt).Error
+
+		assert.NoError(t, err, "更新最後使用時間應該成功")
+	})
+
+	t.Run("批量停用舊設備", func(t *testing.T) {
+		db, mock := testutil.SetupTestDB(t)
+
+		memberID := uuid.New()
+
+		mock.ExpectBegin()
+		mock.ExpectExec("UPDATE \"member_device_tokens\"").
+			WithArgs(false, sqlmock.AnyArg(), memberID, sqlmock.AnyArg()).
+			WillReturnResult(sqlmock.NewResult(0, 2))
+		mock.ExpectCommit()
+
+		cutoffTime := time.Now().AddDate(0, -6, 0)
+		err := db.Model(&MemberDeviceToken{}).
+			Where("member_id = ? AND last_used_at < ?", memberID, cutoffTime).
+			Update("is_active", false).Error
+
+		assert.NoError(t, err, "批量停用舊設備應該成功")
+	})
+}
+
+func TestMemberDeviceToken_Delete(t *testing.T) {
+	t.Run("刪除特定設備", func(t *testing.T) {
+		db, mock := testutil.SetupTestDB(t)
+
+		tokenID := uuid.New()
+
+		mock.ExpectBegin()
+		mock.ExpectExec("DELETE FROM \"member_device_tokens\"").
+			WithArgs(tokenID).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
+
+		err := db.Delete(&MemberDeviceToken{}, tokenID).Error
+
+		assert.NoError(t, err, "刪除設備應該成功")
+	})
+
+	t.Run("刪除會員的所有設備", func(t *testing.T) {
+		db, mock := testutil.SetupTestDB(t)
+
+		memberID := uuid.New()
+
+		mock.ExpectBegin()
+		mock.ExpectExec("DELETE FROM \"member_device_tokens\"").
+			WithArgs(memberID).
+			WillReturnResult(sqlmock.NewResult(0, 3))
+		mock.ExpectCommit()
+
+		err := db.Where("member_id = ?", memberID).Delete(&MemberDeviceToken{}).Error
+
+		assert.NoError(t, err, "刪除會員的所有設備應該成功")
+	})
+}
+
+func TestMemberDeviceToken_EdgeCases(t *testing.T) {
+	t.Run("設備 token 長度邊界", func(t *testing.T) {
+		token := MemberDeviceToken{
+			MemberID:    uuid.New(),
+			DeviceToken: "a", // 最短
+			DeviceType:  "ios",
+			IsActive:    true,
+		}
+		assert.Equal(t, "a", token.DeviceToken)
+
+		longToken := MemberDeviceToken{
+			MemberID:    uuid.New(),
+			DeviceToken: string(make([]byte, 255)), // 最長
+			DeviceType:  "android",
+			IsActive:    true,
+		}
+		assert.Len(t, longToken.DeviceToken, 255)
+	})
+
+	t.Run("空設備類型", func(t *testing.T) {
+		token := MemberDeviceToken{
+			MemberID:    uuid.New(),
+			DeviceToken: "test-token",
+			DeviceType:  "", // 空字串
+			IsActive:    true,
+		}
+		assert.Empty(t, token.DeviceType, "設備類型可以是空字串")
+	})
+
+	t.Run("nil UUID", func(t *testing.T) {
+		token := MemberDeviceToken{
+			MemberID:    uuid.Nil, // nil UUID
+			DeviceToken: "test-token",
+			DeviceType:  "web",
+			IsActive:    true,
+		}
+		assert.Equal(t, uuid.Nil, token.MemberID)
+	})
+
+	t.Run("預設值測試", func(t *testing.T) {
+		token := MemberDeviceToken{
+			MemberID:    uuid.New(),
+			DeviceToken: "test-token",
+			DeviceType:  "ios",
+		}
+
+		// IsActive 沒設定時，Go 預設為 false
+		assert.False(t, token.IsActive, "未設定的 IsActive 應該為 false")
+		assert.Nil(t, token.LastUsedAt, "未設定的 LastUsedAt 應該為 nil")
+	})
+}
+
+func TestMemberDeviceToken_TimestampUpdates(t *testing.T) {
+	t.Run("記錄最後使用時間", func(t *testing.T) {
+		before := time.Now()
+		time.Sleep(10 * time.Millisecond)
+
+		lastUsedAt := time.Now()
+		token := MemberDeviceToken{
+			MemberID:    uuid.New(),
+			DeviceToken: "test-token",
+			DeviceType:  "android",
+			IsActive:    true,
+			LastUsedAt:  &lastUsedAt,
+		}
+
+		assert.NotNil(t, token.LastUsedAt)
+		assert.True(t, token.LastUsedAt.After(before), "最後使用時間應該在之前的時間之後")
+	})
+
+	t.Run("更新最後使用時間", func(t *testing.T) {
+		firstTime := time.Now().Add(-1 * time.Hour)
+		token := MemberDeviceToken{
+			MemberID:    uuid.New(),
+			DeviceToken: "test-token",
+			DeviceType:  "web",
+			IsActive:    true,
+			LastUsedAt:  &firstTime,
+		}
+
+		assert.Equal(t, firstTime, *token.LastUsedAt)
+
+		// 更新時間
+		newTime := time.Now()
+		token.LastUsedAt = &newTime
+
+		assert.Equal(t, newTime, *token.LastUsedAt)
+		assert.True(t, token.LastUsedAt.After(firstTime), "新時間應該晚於舊時間")
 	})
 }
