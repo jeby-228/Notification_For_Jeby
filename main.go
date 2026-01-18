@@ -79,6 +79,7 @@ func initPostgreSQL(cfg *config.Config) error {
 		&models.NotificationProvider{},
 		&models.MemberNotificationPreference{},
 		&models.NotificationLog{},
+		&models.MemberDeviceToken{},
 	); err != nil {
 		return err
 	}
