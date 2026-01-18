@@ -114,11 +114,11 @@ func TestMemberDeviceToken_BaseFields(t *testing.T) {
 
 	// Base 的 ID 欄位應該可以訪問
 	token.ID = uuid.New()
-	assert.NotEqual(t, uuid.Nil, token.ID, "Base.ID 應該可以設置")
+	assert.NotEqual(t, uuid.Nil, token.ID, "ID 應該可以設置")
 
 	// Base 的 CreationTime 欄位應該可以訪問
 	token.CreationTime = time.Now()
-	assert.False(t, token.CreationTime.IsZero(), "Base.CreationTime 應該可以設置")
+	assert.False(t, token.CreationTime.IsZero(), "CreationTime 應該可以設置")
 }
 
 func TestMemberDeviceToken_MultipleDevices(t *testing.T) {
