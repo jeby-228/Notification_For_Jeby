@@ -1,11 +1,14 @@
 package models
 
 import (
+	"member_API/testutil"
 	"testing"
 	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 )
 
 func TestMemberDeviceToken_Structure(t *testing.T) {
@@ -110,12 +113,12 @@ func TestMemberDeviceToken_BaseFields(t *testing.T) {
 	}
 
 	// Base 的 ID 欄位應該可以訪問
-	token.Base.ID = uuid.New()
-	assert.NotEqual(t, uuid.Nil, token.Base.ID, "Base.ID 應該可以設置")
+	token.ID = uuid.New()
+	assert.NotEqual(t, uuid.Nil, token.ID, "Base.ID 應該可以設置")
 
 	// Base 的 CreationTime 欄位應該可以訪問
-	token.Base.CreationTime = time.Now()
-	assert.False(t, token.Base.CreationTime.IsZero(), "Base.CreationTime 應該可以設置")
+	token.CreationTime = time.Now()
+	assert.False(t, token.CreationTime.IsZero(), "Base.CreationTime 應該可以設置")
 }
 
 func TestMemberDeviceToken_MultipleDevices(t *testing.T) {
@@ -150,4 +153,145 @@ func TestMemberDeviceToken_MultipleDevices(t *testing.T) {
 	assert.NotEqual(t, iosToken.DeviceToken, androidToken.DeviceToken, "不同設備應該有不同的 token")
 	assert.NotEqual(t, iosToken.DeviceToken, webToken.DeviceToken, "不同設備應該有不同的 token")
 	assert.NotEqual(t, androidToken.DeviceToken, webToken.DeviceToken, "不同設備應該有不同的 token")
+}
+
+func TestMemberDeviceToken_DatabaseConstraints(t *testing.T) {
+	// 測試資料庫層級的約束條件
+	t.Run("Invalid device type should be rejected", func(t *testing.T) {
+		db, mock := testutil.SetupTestDB(t)
+		
+		memberID := uuid.New()
+		invalidToken := &MemberDeviceToken{
+			MemberID:    memberID,
+			DeviceToken: "test-token",
+			DeviceType:  "invalid", // 無效的設備類型
+			IsActive:    true,
+		}
+		
+		// 預期 INSERT 會失敗，因為 device_type 不符合 CHECK 約束
+		mock.ExpectBegin()
+		mock.ExpectExec("INSERT").
+			WillReturnError(gorm.ErrCheckConstraintViolated)
+		mock.ExpectRollback()
+		
+		err := db.Create(invalidToken).Error
+		assert.Error(t, err, "無效的 device_type 應該被拒絕")
+	})
+	
+	t.Run("Composite unique constraint prevents duplicate tokens per member", func(t *testing.T) {
+		db, mock := testutil.SetupTestDB(t)
+		
+		memberID := uuid.New()
+		deviceToken := "duplicate-token"
+		
+		// 第一次插入成功
+		token1 := &MemberDeviceToken{
+			Base: Base{
+				ID: uuid.New(),
+			},
+			MemberID:    memberID,
+			DeviceToken: deviceToken,
+			DeviceType:  "ios",
+			IsActive:    true,
+		}
+		
+		mock.ExpectBegin()
+		mock.ExpectExec("INSERT").
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
+		
+		err := db.Create(token1).Error
+		assert.NoError(t, err, "第一次插入應該成功")
+		
+		// 相同會員相同 token 的第二次插入應該失敗
+		token2 := &MemberDeviceToken{
+			Base: Base{
+				ID: uuid.New(),
+			},
+			MemberID:    memberID,
+			DeviceToken: deviceToken,
+			DeviceType:  "android",
+			IsActive:    true,
+		}
+		
+		mock.ExpectBegin()
+		mock.ExpectExec("INSERT").
+			WillReturnError(gorm.ErrDuplicatedKey)
+		mock.ExpectRollback()
+		
+		err = db.Create(token2).Error
+		assert.Error(t, err, "相同會員的重複 token 應該被拒絕")
+	})
+	
+	t.Run("Same token allowed across different members", func(t *testing.T) {
+		db, mock := testutil.SetupTestDB(t)
+		
+		deviceToken := "shared-token"
+		member1ID := uuid.New()
+		member2ID := uuid.New()
+		
+		// 會員1插入成功
+		token1 := &MemberDeviceToken{
+			Base: Base{
+				ID: uuid.New(),
+			},
+			MemberID:    member1ID,
+			DeviceToken: deviceToken,
+			DeviceType:  "ios",
+			IsActive:    true,
+		}
+		
+		mock.ExpectBegin()
+		mock.ExpectExec("INSERT").
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
+		
+		err := db.Create(token1).Error
+		assert.NoError(t, err, "會員1插入應該成功")
+		
+		// 會員2使用相同 token 應該也能成功
+		token2 := &MemberDeviceToken{
+			Base: Base{
+				ID: uuid.New(),
+			},
+			MemberID:    member2ID,
+			DeviceToken: deviceToken,
+			DeviceType:  "android",
+			IsActive:    true,
+		}
+		
+		mock.ExpectBegin()
+		mock.ExpectExec("INSERT").
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
+		
+		err = db.Create(token2).Error
+		assert.NoError(t, err, "不同會員使用相同 token 應該成功")
+	})
+	
+	t.Run("Valid device types are accepted", func(t *testing.T) {
+		db, mock := testutil.SetupTestDB(t)
+		
+		validTypes := []string{"ios", "android", "web"}
+		
+		for _, deviceType := range validTypes {
+			token := &MemberDeviceToken{
+				Base: Base{
+					ID: uuid.New(),
+				},
+				MemberID:    uuid.New(),
+				DeviceToken: "test-token-" + deviceType,
+				DeviceType:  deviceType,
+				IsActive:    true,
+			}
+			
+			mock.ExpectBegin()
+			mock.ExpectExec("INSERT").
+				WillReturnResult(sqlmock.NewResult(1, 1))
+			mock.ExpectCommit()
+			
+			err := db.Create(token).Error
+			assert.NoError(t, err, "有效的 device_type '%s' 應該被接受", deviceType)
+		}
+	})
 }
