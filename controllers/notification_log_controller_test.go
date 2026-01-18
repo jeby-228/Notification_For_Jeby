@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -211,7 +210,7 @@ func TestGetNotificationLogByID(t *testing.T) {
 			logID: uuid.New().String(),
 			setupMock: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(`SELECT \* FROM "notification_logs" WHERE id = \$1`).
-					WillReturnError(fmt.Errorf("record not found"))
+					WillReturnError(gorm.ErrRecordNotFound)
 			},
 			expectedStatus: http.StatusNotFound,
 			checkResponse: func(t *testing.T, resp map[string]interface{}) {

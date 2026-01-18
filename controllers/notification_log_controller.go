@@ -1,14 +1,16 @@
 package controllers
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"member_API/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // GetNotificationLogs returns notification logs with filtering and pagination
@@ -135,7 +137,7 @@ func GetNotificationLogByID(c *gin.Context) {
 
 	var log models.NotificationLog
 	if err := db.WithContext(c.Request.Context()).Where("id = ?", logID).First(&log).Error; err != nil {
-		if err.Error() == "record not found" {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "log not found"})
 			return
 		}
@@ -240,9 +242,5 @@ func GetNotificationLogStats(c *gin.Context) {
 
 // parsePositiveInt parses a string to a positive integer
 func parsePositiveInt(s string) (int, error) {
-	var val int
-	if _, err := fmt.Sscanf(s, "%d", &val); err != nil {
-		return 0, err
-	}
-	return val, nil
+	return strconv.Atoi(s)
 }
