@@ -86,6 +86,7 @@ func initPostgreSQL(cfg *config.Config) error {
 
 	db = gormDB
 	controllers.SetupUserController(db)
+	controllers.SetupFirebaseController(db)
 	auth.SetAPIKeyMiddlewareDB(db)
 
 	log.Println("Connected to PostgreSQL")
