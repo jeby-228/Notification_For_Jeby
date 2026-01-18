@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"member_API/auth"
 	"member_API/config"
 	"member_API/controllers"
 	_ "member_API/docs"
@@ -84,6 +85,7 @@ func initPostgreSQL(cfg *config.Config) error {
 
 	db = gormDB
 	controllers.SetupUserController(db)
+	auth.SetAPIKeyMiddlewareDB(db)
 
 	log.Println("Connected to PostgreSQL")
 	return nil
