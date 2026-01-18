@@ -14,7 +14,8 @@ import (
 func GetEncryptionKey() []byte {
 	key := os.Getenv("ENCRYPTION_KEY")
 	if key == "" {
-		// 預設金鑰（32 bytes for AES-256），生產環境應該使用環境變數
+		// ⚠️ WARNING: 預設金鑰僅供開發使用，生產環境必須設置 ENCRYPTION_KEY 環境變數
+		// Default key for development only - MUST set ENCRYPTION_KEY in production
 		key = "default-32-byte-key-for-dev!!"
 	}
 	// 確保金鑰長度為 32 bytes
