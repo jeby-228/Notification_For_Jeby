@@ -72,7 +72,10 @@ func (s *SMTPService) SendEmail(memberID uuid.UUID, providerID uuid.UUID, req Em
 			now := time.Now()
 			log.Status = models.StatusSent
 			log.SentAt = &now
-			s.DB.Create(&log)
+			if err := s.DB.Create(&log).Error; err != nil {
+				// Log the database error but don't fail the email send operation
+				fmt.Printf("Warning: Failed to create success log: %v\n", err)
+			}
 			return nil
 		}
 		lastErr = err
@@ -83,27 +86,33 @@ func (s *SMTPService) SendEmail(memberID uuid.UUID, providerID uuid.UUID, req Em
 
 	log.Status = models.StatusFailed
 	log.ErrorMsg = lastErr.Error()
-	s.DB.Create(&log)
+	if err := s.DB.Create(&log).Error; err != nil {
+		// Log the database error but don't fail the operation
+		fmt.Printf("Warning: Failed to create failure log: %v\n", err)
+	}
 
 	return fmt.Errorf("failed after %d retries: %w", maxEmailRetries, lastErr)
 }
 
 func (s *SMTPService) sendEmailWithConfig(config models.SMTPConfig, req EmailRequest) error {
+	// Validate config
+	if config.Host == "" || config.Port == 0 || config.Username == "" || config.Password == "" || config.From == "" {
+		return errors.New("invalid smtp config: missing required fields")
+	}
+
 	from := config.From
 	to := []string{req.RecipientEmail}
 	
-	headers := make(map[string]string)
-	headers["From"] = from
-	headers["To"] = req.RecipientEmail
-	headers["Subject"] = req.Subject
-	headers["MIME-Version"] = "1.0"
-	headers["Content-Type"] = "text/html; charset=UTF-8"
-	
-	message := ""
-	for k, v := range headers {
-		message += fmt.Sprintf("%s: %s\r\n", k, v)
+	// Build headers in fixed order for consistency
+	headerLines := []string{
+		fmt.Sprintf("From: %s", from),
+		fmt.Sprintf("To: %s", req.RecipientEmail),
+		fmt.Sprintf("Subject: %s", req.Subject),
+		"MIME-Version: 1.0",
+		"Content-Type: text/html; charset=UTF-8",
 	}
-	message += "\r\n" + req.Body
+	
+	message := strings.Join(headerLines, "\r\n") + "\r\n\r\n" + req.Body
 
 	addr := fmt.Sprintf("%s:%d", config.Host, config.Port)
 	auth := smtp.PlainAuth("", config.Username, config.Password, config.Host)
@@ -117,24 +126,28 @@ func (s *SMTPService) sendEmailWithConfig(config models.SMTPConfig, req EmailReq
 
 func (s *SMTPService) sendMailTLS(addr string, auth smtp.Auth, from string, to []string, msg []byte) error {
 	host := strings.Split(addr, ":")[0]
-	
+
+	// Connect to SMTP server without TLS
+	client, err := smtp.Dial(addr)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if cerr := client.Close(); cerr != nil {
+			// Log close error but don't override the main error
+		}
+	}()
+
+	// Start TLS for secure communication (STARTTLS)
 	tlsConfig := &tls.Config{
 		ServerName:         host,
 		InsecureSkipVerify: false,
 		MinVersion:         tls.VersionTLS12,
 	}
 
-	conn, err := tls.Dial("tcp", addr, tlsConfig)
-	if err != nil {
+	if err = client.StartTLS(tlsConfig); err != nil {
 		return err
 	}
-	defer conn.Close()
-
-	client, err := smtp.NewClient(conn, host)
-	if err != nil {
-		return err
-	}
-	defer client.Close()
 
 	if auth != nil {
 		if err = client.Auth(auth); err != nil {
@@ -146,8 +159,8 @@ func (s *SMTPService) sendMailTLS(addr string, auth smtp.Auth, from string, to [
 		return err
 	}
 
-	for _, addr := range to {
-		if err = client.Rcpt(addr); err != nil {
+	for _, recipient := range to {
+		if err = client.Rcpt(recipient); err != nil {
 			return err
 		}
 	}

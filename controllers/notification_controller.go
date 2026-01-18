@@ -68,7 +68,9 @@ func SendEmail(c *gin.Context) {
 
 	smtpService := services.NewSMTPService(notificationDB)
 	if err := smtpService.SendEmail(memberID, providerID, req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// Log detailed error server-side for debugging
+		// Return generic error to client to avoid exposing internal details
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send email"})
 		return
 	}
 
