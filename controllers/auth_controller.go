@@ -141,7 +141,7 @@ func Login(c *gin.Context) {
 
 	var member models.Member
 	err := db.WithContext(c.Request.Context()).
-		Where("email = ? AND tenants_id = ?", req.Email, req.Tenants.ID).
+		Where("email = ?", req.Email).
 		First(&member).Error
 
 	if err != nil {

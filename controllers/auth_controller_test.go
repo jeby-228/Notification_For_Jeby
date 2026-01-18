@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"member_API/auth"
-	"member_API/models"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
@@ -136,7 +135,6 @@ func TestRegister(t *testing.T) {
 
 func TestLogin(t *testing.T) {
 	memberID := uuid.New()
-	tenantID := uuid.New()
 	now := time.Now()
 	hashedPassword, _ := auth.HashPassword("password123")
 
@@ -150,7 +148,6 @@ func TestLogin(t *testing.T) {
 		{
 			name: "成功登入",
 			requestBody: LoginRequest{
-				Tenants:  models.Tenants{ID: tenantID},
 				Email:    "test@example.com",
 				Password: "password123",
 			},
@@ -159,11 +156,11 @@ func TestLogin(t *testing.T) {
 					"id", "name", "email", "password_hash", "tenants_id", "api_key",
 					"creation_time", "creator_id", "is_deleted",
 				}).AddRow(
-					memberID, "Test User", "test@example.com", hashedPassword, tenantID, "key",
+					memberID, "Test User", "test@example.com", hashedPassword, uuid.Nil, "key",
 					now, uuid.New(), false,
 				)
 				mock.ExpectQuery(`SELECT \* FROM "members"`).
-					WithArgs("test@example.com", tenantID, 1).
+					WithArgs("test@example.com", 1).
 					WillReturnRows(rows)
 			},
 			expectedStatus: http.StatusOK,
@@ -176,13 +173,12 @@ func TestLogin(t *testing.T) {
 		{
 			name: "用戶不存在",
 			requestBody: LoginRequest{
-				Tenants:  models.Tenants{ID: tenantID},
 				Email:    "notfound@example.com",
 				Password: "password123",
 			},
 			setupMock: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(`SELECT \* FROM "members"`).
-					WithArgs("notfound@example.com", tenantID, 1).
+					WithArgs("notfound@example.com", 1).
 					WillReturnError(gorm.ErrRecordNotFound)
 			},
 			expectedStatus: http.StatusUnauthorized,
@@ -194,20 +190,19 @@ func TestLogin(t *testing.T) {
 		{
 			name: "密碼錯誤",
 			requestBody: LoginRequest{
-				Tenants:  models.Tenants{ID: tenantID},
 				Email:    "test@example.com",
 				Password: "wrongpassword",
 			},
 			setupMock: func(mock sqlmock.Sqlmock) {
 				rows := sqlmock.NewRows([]string{
-					"id", "name", "email", "password_hash", "tenants_id", "api_key",
+					"id", "name", "email", "password_hash", "api_key",
 					"creation_time", "creator_id", "is_deleted",
 				}).AddRow(
-					memberID, "Test User", "test@example.com", hashedPassword, tenantID, "key",
+					memberID, "Test User", "test@example.com", hashedPassword, "key",
 					now, uuid.New(), false,
 				)
 				mock.ExpectQuery(`SELECT \* FROM "members"`).
-					WithArgs("test@example.com", tenantID, 1).
+					WithArgs("test@example.com", 1).
 					WillReturnRows(rows)
 			},
 			expectedStatus: http.StatusUnauthorized,
