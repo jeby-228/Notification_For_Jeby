@@ -301,11 +301,11 @@ func TestTenants_BaseFields(t *testing.T) {
 		}
 
 		// Base 欄位應該可以訪問
-		tenant.Base.Sort = 1
-		assert.Equal(t, 1, tenant.Base.Sort)
+		tenant.Sort = 1
+		assert.Equal(t, 1, tenant.Sort)
 
-		tenant.Base.CreatorId = uuid.New()
-		assert.NotEqual(t, uuid.Nil, tenant.Base.CreatorId)
+		tenant.CreatorId = uuid.New()
+		assert.NotEqual(t, uuid.Nil, tenant.CreatorId)
 	})
 }
 
