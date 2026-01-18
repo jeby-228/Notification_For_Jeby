@@ -20,8 +20,8 @@ type cacheEntry struct {
 }
 
 var (
-	apiKeyCache      = sync.Map{}
-	cacheTTL         = 5 * time.Minute
+	apiKeyCache        = sync.Map{}
+	cacheTTL           = 5 * time.Minute
 	apiKeyMiddlewareDB *gorm.DB
 )
 

@@ -225,10 +225,10 @@ func TestAPIKeyMiddleware_CacheExpiration(t *testing.T) {
 	tenantID := uuid.New()
 
 	member := &models.Member{
-		Base: models.Base{ID: memberID},
-		Name: "Test User",
-		Email: "test@example.com",
-		APIKey: apiKey,
+		Base:      models.Base{ID: memberID},
+		Name:      "Test User",
+		Email:     "test@example.com",
+		APIKey:    apiKey,
 		TenantsID: tenantID,
 	}
 	tenant := &models.Tenants{
