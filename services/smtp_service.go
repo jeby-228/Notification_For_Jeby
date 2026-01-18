@@ -15,6 +15,10 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	maxEmailRetries = 3
+)
+
 type SMTPService struct {
 	DB *gorm.DB
 }
@@ -60,10 +64,9 @@ func (s *SMTPService) SendEmail(memberID uuid.UUID, providerID uuid.UUID, req Em
 		},
 	}
 
-	maxRetries := 3
 	var lastErr error
 
-	for attempt := 0; attempt < maxRetries; attempt++ {
+	for attempt := 0; attempt < maxEmailRetries; attempt++ {
 		err := s.sendEmailWithConfig(config, req)
 		if err == nil {
 			now := time.Now()
@@ -73,7 +76,7 @@ func (s *SMTPService) SendEmail(memberID uuid.UUID, providerID uuid.UUID, req Em
 			return nil
 		}
 		lastErr = err
-		if attempt < maxRetries-1 {
+		if attempt < maxEmailRetries-1 {
 			time.Sleep(time.Duration(attempt+1) * time.Second)
 		}
 	}
@@ -82,7 +85,7 @@ func (s *SMTPService) SendEmail(memberID uuid.UUID, providerID uuid.UUID, req Em
 	log.ErrorMsg = lastErr.Error()
 	s.DB.Create(&log)
 
-	return fmt.Errorf("failed after %d retries: %w", maxRetries, lastErr)
+	return fmt.Errorf("failed after %d retries: %w", maxEmailRetries, lastErr)
 }
 
 func (s *SMTPService) sendEmailWithConfig(config models.SMTPConfig, req EmailRequest) error {
@@ -116,7 +119,9 @@ func (s *SMTPService) sendMailTLS(addr string, auth smtp.Auth, from string, to [
 	host := strings.Split(addr, ":")[0]
 	
 	tlsConfig := &tls.Config{
-		ServerName: host,
+		ServerName:         host,
+		InsecureSkipVerify: false,
+		MinVersion:         tls.VersionTLS12,
 	}
 
 	conn, err := tls.Dial("tcp", addr, tlsConfig)

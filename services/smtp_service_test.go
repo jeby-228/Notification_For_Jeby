@@ -27,7 +27,10 @@ func TestSendEmail(t *testing.T) {
 		From:     "noreply@example.com",
 		UseTLS:   false,
 	}
-	configJSON, _ := json.Marshal(smtpConfig)
+	configJSON, err := json.Marshal(smtpConfig)
+	if err != nil {
+		t.Fatalf("failed to marshal config: %v", err)
+	}
 
 	tests := []struct {
 		name      string
