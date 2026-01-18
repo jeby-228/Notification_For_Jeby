@@ -14,7 +14,6 @@ import (
 )
 
 type LoginRequest struct {
-	Tenants  models.Tenants
 	Email    string `json:"email" binding:"required,email" example:"user@example.com"`
 	Password string `json:"password" binding:"required,min=6" example:"password123"`
 }
@@ -141,7 +140,7 @@ func Login(c *gin.Context) {
 
 	var member models.Member
 	err := db.WithContext(c.Request.Context()).
-		Where("email = ? AND tenants_id = ?", req.Email, req.Tenants.ID).
+		Where("email = ?", req.Email).
 		First(&member).Error
 
 	if err != nil {
