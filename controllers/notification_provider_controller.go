@@ -11,10 +11,10 @@ import (
 )
 
 type CreateProviderRequest struct {
-	TenantsID uuid.UUID            `json:"tenants_id" binding:"required"`
-	Name      string               `json:"name" binding:"required"`
-	Type      models.ProviderType  `json:"type" binding:"required"`
-	Config    string               `json:"config" binding:"required"`
+	TenantsID uuid.UUID           `json:"tenants_id" binding:"required"`
+	Name      string              `json:"name" binding:"required"`
+	Type      models.ProviderType `json:"type" binding:"required"`
+	Config    string              `json:"config" binding:"required"`
 }
 
 type UpdateProviderRequest struct {
