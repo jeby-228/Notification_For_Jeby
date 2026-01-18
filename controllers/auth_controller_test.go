@@ -9,30 +9,14 @@ import (
 	"time"
 
 	"member_API/auth"
+	"member_API/testutil"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
-
-func setupTestDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
-	sqlDB, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("Failed to create mock: %v", err)
-	}
-
-	gormDB, err := gorm.Open(postgres.New(postgres.Config{
-		Conn: sqlDB,
-	}), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to open gorm db: %v", err)
-	}
-
-	return gormDB, mock
-}
 
 func setupTestRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
@@ -108,7 +92,7 @@ func TestRegister(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gormDB, mock := setupTestDB(t)
+			gormDB, mock := testutil.SetupTestDB(t)
 			SetupUserController(gormDB)
 			defer SetupUserController(nil)
 
@@ -227,7 +211,7 @@ func TestLogin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gormDB, mock := setupTestDB(t)
+			gormDB, mock := testutil.SetupTestDB(t)
 			SetupUserController(gormDB)
 			defer SetupUserController(nil)
 
@@ -316,7 +300,7 @@ func TestGetProfile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gormDB, mock := setupTestDB(t)
+			gormDB, mock := testutil.SetupTestDB(t)
 			SetupUserController(gormDB)
 			defer SetupUserController(nil)
 
@@ -390,7 +374,7 @@ func TestLoginWithoutDB(t *testing.T) {
 }
 
 func TestGetProfileWithInvalidUserID(t *testing.T) {
-	gormDB, _ := setupTestDB(t)
+	gormDB, _ := testutil.SetupTestDB(t)
 	SetupUserController(gormDB)
 	defer SetupUserController(nil)
 
@@ -413,7 +397,7 @@ func TestGetProfileWithInvalidUserID(t *testing.T) {
 }
 
 func TestRegisterTokenGenerationError(t *testing.T) {
-	gormDB, mock := setupTestDB(t)
+	gormDB, mock := testutil.SetupTestDB(t)
 	SetupUserController(gormDB)
 	defer SetupUserController(nil)
 

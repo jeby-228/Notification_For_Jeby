@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"member_API/testutil"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -65,7 +67,7 @@ func TestGetUsers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gormDB, mock := setupTestDB(t)
+			gormDB, mock := testutil.SetupTestDB(t)
 			SetupUserController(gormDB)
 			defer SetupUserController(nil)
 
@@ -179,7 +181,7 @@ func TestGetUserByID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gormDB, mock := setupTestDB(t)
+			gormDB, mock := testutil.SetupTestDB(t)
 			SetupUserController(gormDB)
 			defer SetupUserController(nil)
 
@@ -275,7 +277,7 @@ func TestDeleteUserByID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gormDB, mock := setupTestDB(t)
+			gormDB, mock := testutil.SetupTestDB(t)
 			SetupUserController(gormDB)
 			defer SetupUserController(nil)
 
