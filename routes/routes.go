@@ -34,5 +34,6 @@ func SetupRouter(Router *gin.Engine) {
 	apiKeyProtected.Use(auth.APIKeyMiddleware())
 	{
 		apiKeyProtected.GET("/auth/verify-key", controllers.VerifyAPIKey)
+		apiKeyProtected.POST("/notifications/sms", controllers.SendSMS)
 	}
 }
