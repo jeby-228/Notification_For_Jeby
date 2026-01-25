@@ -8,28 +8,21 @@ definitions:
       user:
         $ref: '#/definitions/controllers.User'
     type: object
-  controllers.CreateProductRequest:
+  controllers.CreateProviderRequest:
     properties:
-      product_description:
-        example: 最新款 iPhone
+      config:
         type: string
-      product_image:
-        example: https://example.com/image.jpg
+      name:
         type: string
-      product_name:
-        example: iPhone 15 Pro
+      tenants_id:
         type: string
-      product_price:
-        example: 35900
-        type: number
-      product_stock:
-        example: 100
-        minimum: 0
-        type: integer
+      type:
+        $ref: '#/definitions/models.ProviderType'
     required:
-    - product_name
-    - product_price
-    - product_stock
+    - config
+    - name
+    - tenants_id
+    - type
     type: object
   controllers.LoginRequest:
     properties:
@@ -43,27 +36,6 @@ definitions:
     required:
     - email
     - password
-    type: object
-  controllers.ProductResponse:
-    properties:
-      id:
-        example: 1
-        type: integer
-      product_description:
-        example: 最新款 iPhone
-        type: string
-      product_image:
-        example: https://example.com/image.jpg
-        type: string
-      product_name:
-        example: iPhone 15 Pro
-        type: string
-      product_price:
-        example: 35900
-        type: number
-      product_stock:
-        example: 100
-        type: integer
     type: object
   controllers.RegisterRequest:
     properties:
@@ -82,23 +54,20 @@ definitions:
     - name
     - password
     type: object
-  controllers.UpdateProductRequest:
+  controllers.UpdateProviderRequest:
     properties:
-      product_description:
-        example: 更新的描述
+      config:
         type: string
-      product_image:
-        example: https://example.com/new-image.jpg
+      is_active:
+        type: boolean
+      name:
         type: string
-      product_name:
-        example: iPhone 15 Pro Max
-        type: string
-      product_price:
-        example: 42900
-        type: number
-      product_stock:
-        example: 50
-        type: integer
+      type:
+        $ref: '#/definitions/models.ProviderType'
+    required:
+    - config
+    - name
+    - type
     type: object
   controllers.User:
     properties:
@@ -112,6 +81,47 @@ definitions:
         example: 張三
         type: string
     type: object
+  models.NotificationProvider:
+    properties:
+      config:
+        type: string
+      created_at:
+        description: 創建時間
+        type: string
+      creator_id:
+        description: 創建者ID
+        type: string
+      id:
+        description: 主鍵ID
+        type: string
+      is_active:
+        type: boolean
+      last_modification_time:
+        description: 最後修改時間
+        type: string
+      last_modifier_id:
+        description: 最後修改者ID
+        type: string
+      name:
+        type: string
+      sort:
+        description: 排序欄位
+        type: integer
+      tenants_id:
+        type: string
+      type:
+        $ref: '#/definitions/models.ProviderType'
+    type: object
+  models.ProviderType:
+    enum:
+    - SMTP
+    - SMS
+    - FIREBASE
+    type: string
+    x-enum-varnames:
+    - ProviderSMTP
+    - ProviderSMS
+    - ProviderFirebase
 host: localhost:9876
 info:
   contact:
@@ -127,6 +137,74 @@ info:
   title: Member API
   version: "1.0"
 paths:
+  /auth/regenerate-key:
+    post:
+      consumes:
+      - application/json
+      description: 重新生成當前用戶的 API Key，舊的 API Key 將失效
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 重新生成成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 重新生成 API Key
+      tags:
+      - 認證
+  /auth/verify-key:
+    get:
+      consumes:
+      - application/json
+      description: 驗證提供的 API Key 是否有效並返回會員資訊
+      parameters:
+      - description: API Key
+        in: header
+        name: X-API-Key
+        type: string
+      - description: 'API Key (格式: ApiKey {key})'
+        in: header
+        name: Authorization
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: API Key 有效
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 無效的 API Key
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 驗證 API Key 是否有效
+      tags:
+      - 認證
   /health:
     get:
       consumes:
@@ -184,248 +262,6 @@ paths:
       summary: 用戶登入
       tags:
       - 認證
-  /product:
-    post:
-      consumes:
-      - application/json
-      description: 創建新產品，需要 JWT 認證
-      parameters:
-      - description: 產品信息
-        in: body
-        name: product
-        required: true
-        schema:
-          $ref: '#/definitions/controllers.CreateProductRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: 創建成功
-          schema:
-            additionalProperties:
-              $ref: '#/definitions/controllers.ProductResponse'
-            type: object
-        "400":
-          description: 請求參數錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: 未認證
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 服務器錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: 創建產品
-      tags:
-      - 產品
-  /product/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: 根據產品 ID 軟刪除產品，需要 JWT 認證
-      parameters:
-      - description: 產品 ID
-        example: 1
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 刪除成功
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: 無效的產品 ID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: 未認證
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: 產品不存在
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 服務器錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: 刪除產品
-      tags:
-      - 產品
-    get:
-      consumes:
-      - application/json
-      description: 根據產品 ID 獲取單個產品的詳細信息，需要 JWT 認證
-      parameters:
-      - description: 產品 ID
-        example: 1
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 獲取成功
-          schema:
-            additionalProperties:
-              $ref: '#/definitions/controllers.ProductResponse'
-            type: object
-        "400":
-          description: 無效的產品 ID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: 未認證
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: 產品不存在
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 服務器錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: 根據 ID 獲取產品
-      tags:
-      - 產品
-    put:
-      consumes:
-      - application/json
-      description: 根據產品 ID 更新產品信息，需要 JWT 認證
-      parameters:
-      - description: 產品 ID
-        example: 1
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: 要更新的產品信息
-        in: body
-        name: product
-        required: true
-        schema:
-          $ref: '#/definitions/controllers.UpdateProductRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 更新成功
-          schema:
-            additionalProperties:
-              $ref: '#/definitions/controllers.ProductResponse'
-            type: object
-        "400":
-          description: 請求參數錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: 未認證
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: 產品不存在
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 服務器錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: 更新產品
-      tags:
-      - 產品
-  /products:
-    get:
-      consumes:
-      - application/json
-      description: 獲取產品列表，最多返回 100 條記錄，需要 JWT 認證
-      parameters:
-      - default: 50
-        description: 限制返回數量
-        in: query
-        maximum: 100
-        minimum: 1
-        name: limit
-        type: integer
-      - default: 0
-        description: 偏移量
-        in: query
-        minimum: 0
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 獲取成功
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: 未認證
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 服務器錯誤
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: 獲取所有產品
-      tags:
-      - 產品
   /profile:
     get:
       consumes:
@@ -463,6 +299,287 @@ paths:
       summary: 獲取當前用戶信息
       tags:
       - 用戶
+  /providers:
+    get:
+      consumes:
+      - application/json
+      description: 取得指定租戶的所有通知提供者配置，需要 JWT 認證
+      parameters:
+      - description: 租戶 ID
+        in: query
+        name: tenants_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 取得成功
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.NotificationProvider'
+              type: array
+            type: object
+        "400":
+          description: 請求參數錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 取得租戶的所有提供者
+      tags:
+      - 通知提供者
+    post:
+      consumes:
+      - application/json
+      description: 建立新的通知提供者配置，需要 JWT 認證
+      parameters:
+      - description: 提供者配置
+        in: body
+        name: provider
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateProviderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 建立成功
+          schema:
+            $ref: '#/definitions/models.NotificationProvider'
+        "400":
+          description: 請求參數錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 建立通知提供者
+      tags:
+      - 通知提供者
+  /providers/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 刪除指定 ID 的通知提供者配置，需要 JWT 認證
+      parameters:
+      - description: 提供者 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 刪除成功
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 請求參數錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 提供者不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 刪除提供者
+      tags:
+      - 通知提供者
+    get:
+      consumes:
+      - application/json
+      description: 取得指定 ID 的通知提供者配置，需要 JWT 認證
+      parameters:
+      - description: 提供者 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 取得成功
+          schema:
+            $ref: '#/definitions/models.NotificationProvider'
+        "400":
+          description: 請求參數錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 提供者不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 取得單一提供者
+      tags:
+      - 通知提供者
+    put:
+      consumes:
+      - application/json
+      description: 更新指定 ID 的通知提供者配置，需要 JWT 認證
+      parameters:
+      - description: 提供者 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 提供者配置
+        in: body
+        name: provider
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateProviderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/models.NotificationProvider'
+        "400":
+          description: 請求參數錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 提供者不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新提供者
+      tags:
+      - 通知提供者
+  /providers/{id}/test:
+    get:
+      consumes:
+      - application/json
+      description: 測試指定 ID 的通知提供者配置是否有效，需要 JWT 認證
+      parameters:
+      - description: 提供者 ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 測試結果
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 請求參數錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未認證
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 提供者不存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服務器錯誤
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 測試提供者配置
+      tags:
+      - 通知提供者
   /register:
     post:
       consumes:
