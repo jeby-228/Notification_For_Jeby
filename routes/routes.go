@@ -28,6 +28,11 @@ func SetupRouter(Router *gin.Engine) {
 		protected.GET("/profile", controllers.GetProfile)
 		protected.DELETE("/user/:id", controllers.DeleteUserByID)
 		protected.POST("/auth/regenerate-key", controllers.RegenerateAPIKey)
+
+		// 通知日誌相關路由
+		protected.GET("/logs/stats", controllers.GetNotificationLogStats)
+		protected.GET("/logs/:id", controllers.GetNotificationLogByID)
+		protected.GET("/logs", controllers.GetNotificationLogs)
 	}
 
 	apiKeyProtected := Router.Group("/api/v1")
