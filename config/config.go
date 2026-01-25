@@ -31,7 +31,7 @@ func Load() *Config {
 			ConnMaxLifetime: time.Hour,
 		},
 		Server: ServerConfig{
-			Port: getEnv("PORT", "9876"),
+			Port: getEnv("PORT", "8080"),
 		},
 	}
 }
