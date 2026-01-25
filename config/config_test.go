@@ -29,7 +29,7 @@ func TestLoad(t *testing.T) {
 				assert.Equal(t, 25, cfg.Database.MaxOpenConns)
 				assert.Equal(t, 25, cfg.Database.MaxIdleConns)
 				assert.Equal(t, time.Hour, cfg.Database.ConnMaxLifetime)
-				assert.Equal(t, "9876", cfg.Server.Port)
+				assert.Equal(t, "8080", cfg.Server.Port)
 			},
 		},
 		{
