@@ -3,7 +3,7 @@
 ## 問題摘要
 
 **Workflow Run**: [#21458369933](https://github.com/jeby-228/Notification_For_Jeby/actions/runs/21458369933)  
-**失敗原因**: Trivy 掃描發現 4 個 CRITICAL/HIGH 級別的安全漏洞  
+**失敗原因**: Trivy 掃描發現 2 個 CRITICAL/HIGH 級別的安全漏洞  
 **影響組件**: Alpine Linux 3.21.5 中的 OpenSSL (libcrypto3 & libssl3)
 
 ## 發現的漏洞
