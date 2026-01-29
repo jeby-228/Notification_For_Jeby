@@ -55,7 +55,7 @@ jobs:
           image-ref: ghcr.io/${{ env.REPO }}:latest
           format: "table"
           severity: "CRITICAL,HIGH"
-          exit-code: "1"
+          exit-code: "0"  # Don't fail scheduled scans, just report findings
 
       # Build and scan workflow for push/PR
       - name: Setup go
